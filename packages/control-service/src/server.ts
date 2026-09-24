@@ -15,6 +15,7 @@ import {
 import { WebSocket, WebSocketServer } from 'ws'
 import { resolveAllowed, type AllowedRoots } from './allowed.js'
 import { atomicWriteFile } from './atomic-write.js'
+import { blankBytes, blankKind } from './blanks.js'
 
 export interface ControlServiceOptions {
   /** Loopback port. 0 picks a free port. */
@@ -268,13 +269,49 @@ async function handleHttp(req: IncomingMessage, res: ServerResponse, ctx: HttpCt
     }
   }
   if (url.pathname === '/api/files/list' && req.method === 'GET') {
-    const dir = ctx.allowed.resolve(url.searchParams.get('path') ?? '')
-    const entries = readdirSync(dir, { withFileTypes: true }).map((entry) => ({
-      name: entry.name,
-      path: join(dir, entry.name),
-      kind: entry.isDirectory() ? 'dir' : 'file',
-    }))
+    const raw = url.searchParams.get('path') ?? ''
+    if (raw === '') {
+      sendJson(res, 200, {
+        entries: ctx.allowed.roots.map((root) => fileEntry(root, basename(root) || root, 'dir')),
+      })
+      return
+    }
+    const dir = ctx.allowed.resolve(raw)
+    const entries = readdirSync(dir, { withFileTypes: true }).map((entry) =>
+      fileEntry(join(dir, entry.name), entry.name, entry.isDirectory() ? 'dir' : 'file'),
+    )
     sendJson(res, 200, { entries })
+    return
+  }
+  if (url.pathname === '/api/files/stat' && req.method === 'GET') {
+    const path = ctx.allowed.resolve(url.searchParams.get('path') ?? '')
+    if (!existsSync(path)) {
+      sendJson(res, 404, { error: 'not_found', message: 'file not found' })
+      return
+    }
+    const stat = statSync(path)
+    sendJson(res, 200, fileEntry(path, basename(path) || path, stat.isDirectory() ? 'dir' : 'file'))
+    return
+  }
+  if (url.pathname === '/api/files/create' && req.method === 'POST') {
+    const dir = ctx.allowed.resolve(url.searchParams.get('dir') ?? '')
+    const name = url.searchParams.get('name') ?? ''
+    if (!name || name !== basename(name) || name === '.' || name === '..') {
+      sendJson(res, 400, { error: 'invalid_argument', message: 'name must be a single path segment' })
+      return
+    }
+    const kind = blankKind(name)
+    if (!kind) {
+      sendJson(res, 400, { error: 'invalid_argument', message: 'unsupported document type' })
+      return
+    }
+    const path = ctx.allowed.resolve(join(dir, name))
+    if (existsSync(path)) {
+      sendJson(res, 409, { error: 'exists', message: `file exists: ${path}` })
+      return
+    }
+    await atomicWriteFile(path, await blankBytes(kind))
+    sendJson(res, 200, fileEntry(path, name, 'file'))
     return
   }
   if (url.pathname === '/api/files/read' && req.method === 'GET') {
@@ -660,6 +697,19 @@ function staticFile(root: string, rel: string): string | null {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
+}
+
+function fileEntry(path: string, name: string, kind: 'file' | 'dir') {
+  let mtimeMs = 0
+  let sizeBytes = 0
+  try {
+    const stat = statSync(path)
+    mtimeMs = stat.mtimeMs
+    sizeBytes = stat.isDirectory() ? 0 : stat.size
+  } catch {
+    /* a root can be listed before it exists */
+  }
+  return { name, path, kind, mtimeMs, sizeBytes }
 }
 
 const HARNESS = `<!doctype html>

@@ -9,5 +9,6 @@ export const he = {
   dirty: 'לא נשמר',
   save: 'שמור',
   discard: 'בטל שינויים',
-  cancel: 'חזור'
+  cancel: 'חזור',
+  failed: 'לא ניתן לקרוא את התיקייה הזו'
 } satisfies Record<keyof typeof zh, string>

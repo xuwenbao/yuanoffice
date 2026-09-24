@@ -9,5 +9,6 @@ export const ms = {
   dirty: 'Belum disimpan',
   save: 'Simpan',
   discard: 'Buang',
-  cancel: 'Batal'
+  cancel: 'Batal',
+  failed: 'Folder ini tidak dapat dibaca'
 } satisfies Record<keyof typeof zh, string>

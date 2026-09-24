@@ -9,5 +9,6 @@ export const es = {
   dirty: 'Sin guardar',
   save: 'Guardar',
   discard: 'Descartar',
-  cancel: 'Cancelar'
+  cancel: 'Cancelar',
+  failed: 'No se pudo leer esta carpeta'
 } satisfies Record<keyof typeof zh, string>

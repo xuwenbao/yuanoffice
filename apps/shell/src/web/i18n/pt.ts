@@ -9,5 +9,6 @@ export const pt = {
   dirty: 'Não salvo',
   save: 'Salvar',
   discard: 'Descartar',
-  cancel: 'Cancelar'
+  cancel: 'Cancelar',
+  failed: 'Não foi possível ler esta pasta'
 } satisfies Record<keyof typeof zh, string>

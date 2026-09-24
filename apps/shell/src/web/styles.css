@@ -5,91 +5,99 @@ body,
   height: 100%;
   background: var(--surface);
   color: var(--text);
-  font: 14px/1.4 sans-serif;
+  font: 14px/1.4 -apple-system, 'PingFang SC', 'Segoe UI', sans-serif;
 }
 
-.shell {
-  display: grid;
-  grid-template-columns: 280px 1fr;
+.app {
+  display: flex;
+  flex-direction: column;
   height: 100vh;
 }
 
-.home {
-  border-right: 1px solid var(--border);
-  background: var(--surface-subtle);
-  padding: 12px;
-  overflow: auto;
-}
-
-.home h1 {
-  font-size: 16px;
-  margin: 0 0 12px;
-}
-
-.home form,
-.tabs {
+.web-tabs {
   display: flex;
-  gap: 8px;
+  align-items: flex-end;
+  gap: 4px;
+  height: 40px;
+  flex: 0 0 40px;
+  padding: 0 8px;
+  background: var(--surface-subtle);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
 }
 
-.home input,
-.home button,
-.tabs button {
+.web-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 220px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.web-tabs button.active {
   background: var(--surface);
   color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  border-color: var(--border);
+  font-weight: 600;
 }
 
-.home input {
-  width: 100%;
-  padding: 6px 8px;
+.web-tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.home button,
-.tabs button {
-  padding: 6px 10px;
+.web-tab-close {
+  color: var(--text-muted);
 }
 
-.home button:hover,
-.tabs button:hover,
-.files button:hover {
-  background: var(--hover);
-}
-
-.files {
-  list-style: none;
-  padding: 8px 0 0;
-  margin: 0;
-}
-
-.files button {
-  width: 100%;
-  text-align: start;
-  background: transparent;
-  border: 0;
-  color: var(--text);
-  padding: 4px 0;
-}
-
-.stage {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.tabs {
-  padding: 8px;
-  border-bottom: 1px solid var(--border);
-}
-
-.tabs button.active {
-  border-color: var(--accent, var(--border-strong));
-}
-
-.frames {
+.web-stage {
   position: relative;
   flex: 1;
+  min-height: 0;
+}
+
+.web-stage > .home,
+.web-stage > .frames,
+.web-stage > div {
+  position: absolute;
+  inset: 0;
+}
+
+.home {
+  height: 100%;
+}
+
+button.tree-chevron,
+button.tree-name {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+button.tree-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: start;
+}
+
+.web-stage > .back,
+.frames iframe.back {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .frames iframe {
@@ -101,24 +109,25 @@ body,
   background: var(--surface);
 }
 
-.frames iframe.back {
-  visibility: hidden;
-  pointer-events: none;
-}
-
 .dialog {
   position: fixed;
   inset: 0;
   display: grid;
   place-items: center;
-  background: var(--hover);
+  background: var(--color-bg-overlay);
 }
 
 .dialog form {
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border);
+  border-radius: var(--radius-12);
   padding: 16px;
   display: grid;
   gap: 8px;
+}
+
+.quick-card:disabled {
+  opacity: 0.6;
+  cursor: default;
 }

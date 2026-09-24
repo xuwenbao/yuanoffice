@@ -61,7 +61,7 @@ start:
 		exit 1; \
 	fi; \
 	: > "$(LOG_FILE)"; \
-	"$(LAUNCHER)" serve --root "$(ROOT)" --port "$(PORT)" --static "$(REPO)/$(STATIC)" >> "$(LOG_FILE)" 2>&1 & \
+	nohup "$(LAUNCHER)" serve --root "$(ROOT)" --port "$(PORT)" --static "$(REPO)/$(STATIC)" >> "$(LOG_FILE)" 2>&1 & \
 	echo $$! > "$(PID_FILE)"; \
 	pid=$$(cat "$(PID_FILE)"); \
 	ok=0; \

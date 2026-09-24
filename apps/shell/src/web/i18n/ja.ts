@@ -9,5 +9,6 @@ export const ja = {
   dirty: '未保存',
   save: '保存',
   discard: '破棄',
-  cancel: 'キャンセル'
+  cancel: 'キャンセル',
+  failed: 'このフォルダを読み取れません'
 } satisfies Record<keyof typeof zh, string>

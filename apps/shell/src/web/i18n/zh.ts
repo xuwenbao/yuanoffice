@@ -8,4 +8,5 @@ export const zh = {
   save: '保存',
   discard: '放弃',
   cancel: '取消',
+  failed: '无法读取这个目录',
 }

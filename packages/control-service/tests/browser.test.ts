@@ -27,7 +27,7 @@ describe('browser editor', () => {
       await page.goto(
         `${service.url}/harness/editor.html?path=${encodeURIComponent(file)}&editorId=e1&text=original`,
       )
-      await page.waitForFunction(() => document.getElementById('doc')?.textContent === 'original')
+      await page.waitForFunction("document.getElementById('doc')?.textContent === 'original'")
       const applied = await fetch(`${service.url}/mcp`, {
         method: 'POST',
         headers: {
@@ -43,7 +43,7 @@ describe('browser editor', () => {
       })
       const body = (await applied.json()) as { result: { content: Array<{ text: string }> } }
       expect(JSON.parse(body.result.content[0]!.text).persisted).toBe(false)
-      await page.waitForFunction(() => document.getElementById('doc')?.textContent === 'original!')
+      await page.waitForFunction("document.getElementById('doc')?.textContent === 'original!'")
       expect(readFileSync(file, 'utf8')).toBe('original')
     } finally {
       await browser.close()

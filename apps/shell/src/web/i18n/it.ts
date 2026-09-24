@@ -9,5 +9,6 @@ export const it = {
   dirty: 'Non salvato',
   save: 'Salva',
   discard: 'Ignora',
-  cancel: 'Annulla'
+  cancel: 'Annulla',
+  failed: 'Impossibile leggere questa cartella'
 } satisfies Record<keyof typeof zh, string>

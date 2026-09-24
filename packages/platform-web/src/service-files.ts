@@ -2,6 +2,8 @@ export interface FileEntry {
   name: string
   path: string
   kind: 'file' | 'dir'
+  mtimeMs?: number
+  sizeBytes?: number
 }
 
 export interface WriteResult {
@@ -28,8 +30,20 @@ export class ServiceFiles {
     return body.entries
   }
 
+  async stat(path: string): Promise<FileEntry> {
+    return this.json<FileEntry>(`/api/files/stat?path=${encodeURIComponent(path)}`)
+  }
+
+  async create(dir: string, name: string): Promise<FileEntry> {
+    return this.json<FileEntry>(
+      `/api/files/create?dir=${encodeURIComponent(dir)}&name=${encodeURIComponent(name)}`,
+      'POST',
+    )
+  }
+
   async read(path: string): Promise<Uint8Array> {
     const response = await fetch(`${this.baseUrl}/api/files/read?path=${encodeURIComponent(path)}`, {
+      credentials: 'same-origin',
       headers: this.headers(),
     })
     if (!response.ok) throw new Error(await errorMessage(response))
@@ -39,7 +53,7 @@ export class ServiceFiles {
   async write(path: string, data: Uint8Array, overwrite: boolean): Promise<WriteResult> {
     const response = await fetch(
       `${this.baseUrl}/api/files/write?path=${encodeURIComponent(path)}&overwrite=${overwrite ? '1' : '0'}`,
-      { method: 'PUT', headers: this.headers(), body: data as BufferSource },
+      { method: 'PUT', credentials: 'same-origin', headers: this.headers(), body: data as BufferSource },
     )
     if (!response.ok) throw new Error(await errorMessage(response))
     return (await response.json()) as WriteResult
@@ -51,8 +65,12 @@ export class ServiceFiles {
     return headers
   }
 
-  private async json<T>(path: string): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, { headers: this.headers() })
+  private async json<T>(path: string, method = 'GET'): Promise<T> {
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      method,
+      credentials: 'same-origin',
+      headers: this.headers(),
+    })
     if (!response.ok) throw new Error(await errorMessage(response))
     return (await response.json()) as T
   }

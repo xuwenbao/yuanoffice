@@ -1,6 +1,6 @@
-import { mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, realpathSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { WebSocket } from 'ws'
 import { resolveAllowed } from '../src/allowed'
@@ -60,6 +60,41 @@ describe('control service', () => {
       { headers },
     )
     expect(escaped.status).toBe(500)
+  })
+
+  it('lists the allowed root when the path is empty', async () => {
+    const root = realpathSync(temp())
+    const userData = temp()
+    const service = await startControlService({ port: 0, roots: [root], userData })
+    services.push(service)
+    const listed = await fetch(`${service.url}/api/files/list?path=`, {
+      headers: { authorization: `Bearer ${service.token}` },
+    })
+    expect(listed.status).toBe(200)
+    const body = (await listed.json()) as { entries: Array<{ name: string; path: string; kind: string; mtimeMs: number; sizeBytes: number }> }
+    expect(body.entries[0]).toMatchObject({
+      name: basename(root),
+      path: root,
+      kind: 'dir',
+      sizeBytes: 0,
+    })
+    expect(body.entries[0]?.mtimeMs).toBeGreaterThan(0)
+  })
+
+  it('creates a blank document inside the root', async () => {
+    const root = realpathSync(temp())
+    const service = await startControlService({ port: 0, roots: [root], userData: temp() })
+    services.push(service)
+    const headers = { authorization: `Bearer ${service.token}` }
+    const created = await fetch(
+      `${service.url}/api/files/create?dir=${encodeURIComponent(root)}&name=${encodeURIComponent('未命名.docx')}`,
+      { method: 'POST', headers },
+    )
+    expect(created.status).toBe(200)
+    const entry = (await created.json()) as { path: string; sizeBytes: number }
+    expect(entry.path).toBe(join(root, '未命名.docx'))
+    expect(entry.sizeBytes).toBe(statSync(entry.path).size)
+    expect(readFileSync(entry.path).subarray(0, 2).toString()).toBe('PK')
   })
 
   it('applies an edit in the page without touching the file, then saves', async () => {

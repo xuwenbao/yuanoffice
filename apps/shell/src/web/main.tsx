@@ -1,15 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import {
-  ControlLink,
-  DraftStore,
-  ServiceFiles,
-  installFrameHost,
-  type FileEntry,
-} from '@genoffice/platform-web'
+import { ControlLink, DraftStore, ServiceFiles, installFrameHost } from '@genoffice/platform-web'
 import '@genoffice/ui/tokens.css'
+import '../renderer/src/home.css'
 import { shellLang, shellStrings } from './i18n'
 import type { zh } from './i18n/zh'
+import { HomeView } from './HomeView'
+import { loadLibrary, remember, saveLibrary, type LibraryRecord } from './library'
 import './styles.css'
 import { editorKind, type WebTab } from './tabs'
 
@@ -24,15 +21,29 @@ const t = (key: keyof typeof zh) => shellStrings(lang, key)
 function Shell() {
   const files = useMemo(() => new ServiceFiles(''), [])
   const drafts = useMemo(() => new DraftStore(), [])
-  const [dir, setDir] = useState('')
-  const [entries, setEntries] = useState<FileEntry[]>([])
+  const [ready, setReady] = useState(false)
+  const [library, setLibrary] = useState<LibraryRecord[]>(() => loadLibrary())
   const [tabs, setTabs] = useState<Tab[]>([])
   const [active, setActive] = useState<string | null>(null)
   const [prompt, setPrompt] = useState<Tab | null>(null)
-  const [recovered, setRecovered] = useState<string[]>([])
+
+  function updateLibrary(next: LibraryRecord[]): void {
+    saveLibrary(next)
+    setLibrary(next)
+  }
+
+  function noteOpened(path: string): void {
+    setLibrary((current) => {
+      const next = remember(current, path, Date.now())
+      saveLibrary(next)
+      return next
+    })
+  }
 
   useEffect(() => {
     void fetch('/api/session', { credentials: 'same-origin' })
+      .then(() => setReady(true))
+      .catch(() => setReady(true))
     const link = new ControlLink(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`, '')
     link.start('shell')
     link.onOpen((path, editorId) => openPath(path, editorId))
@@ -47,7 +58,17 @@ function Shell() {
         )
       }
     })
-    void drafts.list().then((records) => setRecovered(records.map((record) => record.path))).catch(() => {})
+    void drafts
+      .list()
+      .then((records) => {
+        setLibrary((current) => {
+          let next = current
+          for (const record of records) next = remember(next, record.path, record.updatedAt)
+          saveLibrary(next)
+          return next
+        })
+      })
+      .catch(() => {})
     const onFrame = (event: Event): void => {
       const iframe = event.target
       if (!(iframe instanceof HTMLIFrameElement) || !iframe.dataset.frame) return
@@ -72,6 +93,7 @@ function Shell() {
   function openPath(path: string, editorId = crypto.randomUUID().slice(0, 12)): void {
     const kind = editorKind(path)
     if (!kind) return
+    noteOpened(path)
     setTabs((current) => {
       const existing = current.find((tab) => tab.path === path || tab.editorId === editorId)
       if (existing) {
@@ -91,81 +113,49 @@ function Shell() {
     })
   }
 
-  async function browse(event: React.FormEvent): Promise<void> {
-    event.preventDefault()
-    setEntries(await files.list(dir))
-  }
-
   function askClose(tab: Tab): void {
     if (!tab.dirty) {
       setTabs((current) => current.filter((item) => item.id !== tab.id))
+      if (active === tab.editorId) setActive(null)
       return
     }
     setPrompt(tab)
   }
 
   return (
-    <div className="shell">
-      <aside className="home">
-        <h1>{t('home')}</h1>
-        <form onSubmit={(event) => void browse(event)}>
-          <input value={dir} onChange={(event) => setDir(event.target.value)} spellCheck={false} />
-          <button type="submit">{t('browse')}</button>
-        </form>
-        <ul className="files">
-          {entries.length === 0 ? <li>{t('empty')}</li> : null}
-          {entries.map((entry) => (
-            <li key={entry.path}>
-              <button
-                type="button"
-                onClick={() => {
-                  if (entry.kind === 'dir') {
-                    setDir(entry.path)
-                    void files.list(entry.path).then(setEntries)
-                  } else openPath(entry.path)
-                }}
-              >
-                {entry.kind === 'dir' ? `${entry.name}/` : entry.name}
-              </button>
-            </li>
-          ))}
-        </ul>
-        {recovered.length > 0 ? (
-          <ul className="files">
-            {recovered.map((path) => (
-              <li key={path}>
-                <button type="button" onClick={() => openPath(path)}>
-                  {path}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </aside>
-      <section className="stage">
-        <div className="tabs">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              className={tab.editorId === active ? 'active' : ''}
-              onClick={() => setActive(tab.editorId)}
-            >
+    <div className="app">
+      <header className="web-tabs">
+        <button type="button" className={active ? '' : 'active'} onClick={() => setActive(null)}>
+          {t('home')}
+        </button>
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            className={tab.editorId === active ? 'active' : ''}
+            onClick={() => setActive(tab.editorId)}
+          >
+            <span className="web-tab-title">
               {tab.title}
               {tab.dirty ? ` (${t('dirty')})` : ''}
-              <span
-                onClick={(event) => {
-                  event.stopPropagation()
-                  askClose(tab)
-                }}
-              >
-                {' '}
-                {t('close')}
-              </span>
-            </button>
-          ))}
+            </span>
+            <span
+              className="web-tab-close"
+              onClick={(event) => {
+                event.stopPropagation()
+                askClose(tab)
+              }}
+            >
+              {t('close')}
+            </span>
+          </button>
+        ))}
+      </header>
+      <div className="web-stage">
+        <div className={active ? 'back' : ''}>
+          {ready ? <HomeView files={files} library={library} onLibrary={updateLibrary} onOpen={openPath} /> : null}
         </div>
-        <div className="frames">
+        <div className={`frames${active ? '' : ' back'}`}>
           {tabs.map((tab) => (
             <iframe
               key={tab.id}
@@ -176,7 +166,7 @@ function Shell() {
             />
           ))}
         </div>
-      </section>
+      </div>
       {prompt ? (
         <div className="dialog">
           <form
@@ -200,6 +190,7 @@ function Shell() {
                   )
                 }
                 setTabs((current) => current.filter((tab) => tab.id !== prompt.id))
+                if (active === prompt.editorId) setActive(null)
                 setPrompt(null)
               }}
             >
@@ -210,6 +201,7 @@ function Shell() {
               onClick={() => {
                 void drafts.put({ path: prompt.path, updatedAt: Date.now(), bytes: new ArrayBuffer(0) })
                 setTabs((current) => current.filter((tab) => tab.id !== prompt.id))
+                if (active === prompt.editorId) setActive(null)
                 setPrompt(null)
               }}
             >

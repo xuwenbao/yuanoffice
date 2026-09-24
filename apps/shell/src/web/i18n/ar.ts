@@ -9,5 +9,6 @@ export const ar = {
   dirty: 'غير محفوظ',
   save: 'حفظ',
   discard: 'تجاهل',
-  cancel: 'إلغاء'
+  cancel: 'إلغاء',
+  failed: 'تعذر قراءة هذا المجلد'
 } satisfies Record<keyof typeof zh, string>

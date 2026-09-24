@@ -9,5 +9,6 @@ export const pl = {
   dirty: 'Niezapisane',
   save: 'Zapisz',
   discard: 'Odrzuć',
-  cancel: 'Anuluj'
+  cancel: 'Anuluj',
+  failed: 'Nie można odczytać tego folderu'
 } satisfies Record<keyof typeof zh, string>

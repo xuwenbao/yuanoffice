@@ -95,7 +95,7 @@ Package `@genoffice/control-service`, started with `genoffice serve`.
 | Surface | Role |
 | --- | --- |
 | static `dist/web` | Shell at `/`, editors at `/app/<kind>/`, same origin |
-| `GET/PUT /api/files/*` | List, read, atomic write inside the allowed roots |
+| `GET/PUT /api/files/*` | List, stat, read, atomic write, and create a blank docx/xlsx/pptx/pdf inside the allowed roots. An empty list path returns those roots as directories. List and stat include `mtimeMs` and `sizeBytes` |
 | `GET /ws` | Editor channel and shell channel |
 | `POST /mcp` | JSON-RPC MCP: `initialize`, `tools/list`, `tools/call` |
 | `control.json` + socket | Same discovery as the desktop shell, protocol 2 |
@@ -160,7 +160,7 @@ Desktop registrations keep the old `--force` behaviour.
 | 0 Upstream | done | `upstream` remote; fast-forward `f36446f` to `8355a8f` |
 | 1 Docs web | done | Platform packages, docs seam (`docsPlatform()`), web host at `dist/web/app/docs`, control-service file API. Web bundle has no `window.desktop`, `electron`, or `ai-provider`. Docx bytes round-trip through `/api/files`. |
 | 2 Live control | done | `editor-control`, `/mcp`, `genoffice editor`, lease, `--force` ignored for `source: "control-service"`. Playwright opens `/harness/editor.html`: apply changes the page and leaves the file unchanged. |
-| 3 Web shell | done | `apps/shell/src/web`: same-origin iframes, frame protocol, shell WebSocket (`open` / `focus`), IndexedDB drafts, route priority in `tabs.ts` (tested). |
+| 3 Web shell | done | `apps/shell/src/web`: same-origin iframes, frame protocol, shell WebSocket (`open` / `focus`), IndexedDB drafts, route priority in `tabs.ts` (tested). The home page follows the desktop home (recent, starred, folders, new file) and talks only to the file API. |
 | 4 PDF, slides, sheets | done with gaps | PDF renderer seam plus a pdfium-wasm web page (`read_pdf`). Slides session record is in `src/domain/session.ts`; ops stay in the Electron main process. Sheets save pipeline is `src/gateway/workbook-save.ts`. The wasm reactor source is in tree; the wasm32-wasip1 link does not succeed yet (see gaps). |
 
 ## 8. Known gaps

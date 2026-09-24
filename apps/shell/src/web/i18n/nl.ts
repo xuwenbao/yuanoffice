@@ -9,5 +9,6 @@ export const nl = {
   dirty: 'Niet opgeslagen',
   save: 'Opslaan',
   discard: 'Weggooien',
-  cancel: 'Annuleren'
+  cancel: 'Annuleren',
+  failed: 'Deze map kan niet worden gelezen'
 } satisfies Record<keyof typeof zh, string>

@@ -9,5 +9,6 @@ export const zhTW = {
   dirty: '未儲存',
   save: '儲存',
   discard: '放棄',
-  cancel: '取消'
+  cancel: '取消',
+  failed: '無法讀取這個目錄'
 } satisfies Record<keyof typeof zh, string>

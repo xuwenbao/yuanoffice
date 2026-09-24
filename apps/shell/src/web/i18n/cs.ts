@@ -9,5 +9,6 @@ export const cs = {
   dirty: 'Neuloženo',
   save: 'Uložit',
   discard: 'Zahodit',
-  cancel: 'Zrušit'
+  cancel: 'Zrušit',
+  failed: 'Tuto složku nelze načíst'
 } satisfies Record<keyof typeof zh, string>

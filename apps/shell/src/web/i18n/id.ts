@@ -9,5 +9,6 @@ export const id = {
   dirty: 'Belum disimpan',
   save: 'Simpan',
   discard: 'Buang',
-  cancel: 'Batal'
+  cancel: 'Batal',
+  failed: 'Tidak dapat membaca folder ini'
 } satisfies Record<keyof typeof zh, string>

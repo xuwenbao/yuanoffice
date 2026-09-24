@@ -9,5 +9,6 @@ export const hi = {
   dirty: 'सहेजा नहीं',
   save: 'सहेजें',
   discard: 'छोड़ें',
-  cancel: 'रद्द करें'
+  cancel: 'रद्द करें',
+  failed: 'इस फ़ोल्डर को पढ़ा नहीं जा सका'
 } satisfies Record<keyof typeof zh, string>

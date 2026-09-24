@@ -9,5 +9,6 @@ export const de = {
   dirty: 'Nicht gespeichert',
   save: 'Speichern',
   discard: 'Verwerfen',
-  cancel: 'Abbrechen'
+  cancel: 'Abbrechen',
+  failed: 'Dieser Ordner konnte nicht gelesen werden'
 } satisfies Record<keyof typeof zh, string>
