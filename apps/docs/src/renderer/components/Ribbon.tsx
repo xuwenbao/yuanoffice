@@ -717,6 +717,7 @@ function RibbonInner({
   onPagePreview,
 }: RibbonProps) {
   const { t, lang } = useI18n()
+  const aiEnabled = docsPlatform().ai != null
   const collapse = useRibbonCollapse('aidocs.ribbonCollapsed')
   // The one-click AI actions need text to work on; grey them out on an empty document
   const docEmpty = !hasDoc || fs.docEmpty
@@ -2850,6 +2851,8 @@ function RibbonInner({
           </div>
         ) : tab === 'home' ? (
           <>
+            {aiEnabled && (
+              <>
             {/* ---- Genspark AI (first slot: entry + one-click AI actions) ---- */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
@@ -2965,6 +2968,8 @@ function RibbonInner({
             </div>
 
             <div className="ribbon-sep" />
+              </>
+            )}
 
             {/* ---- Clipboard ---- */}
             <div className="ribbon-group">

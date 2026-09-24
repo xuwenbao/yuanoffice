@@ -215,8 +215,10 @@ export function RibbonHomeTab({ rb }: { rb: RibbonTabCtx }) {
       e.currentTarget.blur()
     }
   }
+  const aiEnabled = slidesPlatform().ai != null
   return (
     <>
+      {aiEnabled && (
       <Group label="Genspark AI">
         <button
           className={`rb-big ai-entry${aiOpen ? ' active' : ''}`}
@@ -268,7 +270,8 @@ export function RibbonHomeTab({ rb }: { rb: RibbonTabCtx }) {
           <span>{t('aiImageBtn')}</span>
         </button>
       </Group>
-      <div className="ribbon-sep" />
+      )}
+      {aiEnabled && <div className="ribbon-sep" />}
       <Group label={t('ribbonGroupClipboard')}>
         <button
           className="rb-big"

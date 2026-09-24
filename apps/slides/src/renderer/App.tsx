@@ -3441,7 +3441,7 @@ export function App() {
       />
 
       <div className="app-main">
-        {slide && viewMode !== 'reading' && viewMode !== 'sorter' && (
+        {slide && slidesPlatform().ai && viewMode !== 'reading' && viewMode !== 'sorter' && (
           <div className={`ai-dock${showAi && aiSettings ? '' : ' collapsed'}`}>
             {/* always mounted once settings load: collapse must not drop state or in-flight runs */}
             {aiSettings && slidesPlatform().ai ? (
@@ -3814,6 +3814,7 @@ export function App() {
                             : undefined
                         }
                       >
+                        {slidesPlatform().ai && (
                         <div className="stage-ai-bar">
                           <div className="stage-ai-group">
                             <button
@@ -3865,6 +3866,7 @@ export function App() {
                             )}
                           </div>
                         </div>
+                        )}
                         <div
                           ref={stageScaleRef}
                           className="stage-scale"

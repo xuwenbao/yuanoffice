@@ -697,6 +697,7 @@ export function ReviewTab({
   onCompare,
 }: ReviewTabProps) {
   const { t } = useI18n()
+  const aiEnabled = docsPlatform().ai != null
   // One-time acknowledgement before whole-document AI rewrites:
   // Editor / Translate send the full document to the agent, consume credits and
   // may rewrite everything — say so once before the first run.
@@ -713,6 +714,7 @@ export function ReviewTab({
       {/* Word: Proofing (Editor) sits leftmost */}
       <div className="ribbon-group">
         <div className="ribbon-group-items">
+          {aiEnabled && (
           <button
             className="rb-big"
             disabled={!hasDoc}
@@ -729,6 +731,7 @@ export function ReviewTab({
             </span>
             <span>{t('ribbonEditorBtn')}</span>
           </button>
+          )}
           <button
             className={`rb-big ${spellcheck ? 'active' : ''}`}
             disabled={!hasDoc}
@@ -744,6 +747,8 @@ export function ReviewTab({
         <div className="ribbon-group-label">{t('ribbonGroupProofing')}</div>
       </div>
 
+      {aiEnabled && (
+      <>
       <div className="ribbon-sep" />
 
       <div className="ribbon-group">
@@ -786,6 +791,8 @@ export function ReviewTab({
         </div>
         <div className="ribbon-group-label">{t('ribbonGroupLanguage')}</div>
       </div>
+      </>
+      )}
 
       <div className="ribbon-sep" />
 
@@ -813,6 +820,7 @@ export function ReviewTab({
             </span>
             <span>{t('ribbonShowComments')}</span>
           </button>
+          {aiEnabled && (
           <button
             className="rb-big"
             disabled={!hasDoc || openCommentCount === 0}
@@ -839,6 +847,7 @@ export function ReviewTab({
             </span>
             <span>{t('ribbonAiComments')}</span>
           </button>
+          )}
         </div>
         <div className="ribbon-group-label">{t('ribbonGroupComments')}</div>
       </div>
@@ -984,6 +993,7 @@ export function ReviewTab({
             </span>
             <span>{t('ribbonNextChange')}</span>
           </button>
+          {aiEnabled && (
           <button
             className="rb-big"
             disabled={!hasDoc || revisionCount === 0}
@@ -1011,6 +1021,7 @@ export function ReviewTab({
             </span>
             <span>{t('ribbonAiRevisions')}</span>
           </button>
+          )}
         </div>
         <div className="ribbon-group-label">{t('ribbonGroupTracking')}</div>
       </div>

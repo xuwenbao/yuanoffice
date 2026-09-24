@@ -170,7 +170,8 @@ Absent on purpose, not a silent success:
 - Docs PDF export in the browser (`exportPdf` rejects; print uses `window.print`).
 - Docs crash-recovery is an IndexedDB draft, not the desktop userData copy.
 - Encrypted docx open, Zotero, headless export, and the in-app AI panel are
-  desktop-only. The panel is not mounted when `ai` is null. `ai/tools.ts`
+  desktop-only. When `ai` is null the panel, the Genspark ribbon group, the
+  one-click AI actions, and the chat dock are not mounted. `ai/tools.ts`
   stays, so an external command can still run the editor executors.
 - PDF annotation, drawing, form, and page-op saves need the desktop pdfium
   pipeline. The browser host reads and writes the file bytes. A save that

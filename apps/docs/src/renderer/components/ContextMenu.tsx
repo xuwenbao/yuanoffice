@@ -440,6 +440,8 @@ export function EditorContextMenu({
           })}
         </>
       )}
+      {docsPlatform().ai && (
+      <>
       <div className="ctx-sep" />
       {item(t('appSynonyms'), {
         disabled: !synonymText,
@@ -471,6 +473,8 @@ export function EditorContextMenu({
           </div>
         )}
       </div>
+      </>
+      )}
       {isFloating && (
         <>
           <div className="ctx-sep" />

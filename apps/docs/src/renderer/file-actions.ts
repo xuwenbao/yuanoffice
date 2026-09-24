@@ -597,8 +597,12 @@ export async function newFile(ctx: FileActionContext): Promise<boolean | undefin
     ctx.onWriteProtectionLoaded(null)
     ctx.setCompareResult(null)
     ctx.dirtyRef.current = false
-    ctx.setShowAi(true)
-    ctx.setStatus(t('appNewDocCreated'))
+    ctx.setShowAi(docsPlatform().ai != null)
+    ctx.setStatus(
+      docsPlatform().ai
+        ? t('appNewDocCreated')
+        : t('appOpenedFile', { name: t('appUntitledDocx') }),
+    )
     return true
   } catch (err) {
     if (generation !== openGeneration) return

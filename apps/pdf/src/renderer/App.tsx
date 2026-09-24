@@ -6227,6 +6227,8 @@ export default function App() {
         <div className="ribbon-body" data-ribbon-body="">
           {ribbonTab === 'home' && (
             <>
+              {pdfPlatform().ai && (
+              <>
               {/* ---- Genspark AI (first slot: entry + one-click AI actions, docs parity) ---- */}
               <div className="ribbon-group">
                 <div className="ribbon-group-items">
@@ -6275,6 +6277,8 @@ export default function App() {
                 </div>
               </div>
               <div className="ribbon-sep" />
+              </>
+              )}
               {markupGroup}
               <div className="ribbon-sep" />
               {/* Edit entries lead; Search moved after page/zoom (⌘F is the common path) */}
@@ -6356,6 +6360,8 @@ export default function App() {
           )}
           {ribbonTab === 'annotate' && (
             <>
+              {pdfPlatform().ai && (
+              <>
               <div className="ribbon-group">
                 <div className="ribbon-group-items">
                   <button
@@ -6386,6 +6392,8 @@ export default function App() {
                 </div>
               </div>
               <div className="ribbon-sep" />
+              </>
+              )}
               {markupGroup}
               <div className="ribbon-sep" />
               <div className="ribbon-group">
@@ -6551,6 +6559,7 @@ export default function App() {
             <>
               <div className="ribbon-group">
                 <div className="ribbon-group-items">
+                  {pdfPlatform().ai && (
                   <button
                     className="rb-big ai-entry"
                     disabled={readOnly}
@@ -6564,6 +6573,7 @@ export default function App() {
                     </span>
                     <span>{t('aiFillFormBtn')}</span>
                   </button>
+                  )}
                   <button
                     className={`rb-big${pendingStaticFill === 'text' ? ' active' : ''}`}
                     disabled={readOnly}
@@ -6884,6 +6894,7 @@ export default function App() {
       <div className="app-main">
         {/* dock wrapper animates the width between panel and rail (docs-style 180ms ease);
             the panel stays mounted while collapsed so the chat history survives */}
+        {pdfPlatform().ai && (
         <div className={`ai-dock${aiCollapsed ? ' collapsed' : ''}`}>
           {aiCollapsed && (
             <button
@@ -6895,7 +6906,6 @@ export default function App() {
               <GensparkMark size={22} />
             </button>
           )}
-          {pdfPlatform().ai && (
           <AiPanel
             api={aiApi}
             filePath={filePath}
@@ -6904,8 +6914,8 @@ export default function App() {
             onRunDone={() => void autoSaveAfterAiRun()}
             onClearSelection={() => setAiSelection(null)}
           />
-          )}
         </div>
+        )}
         <div className="app-content">
           <div className="pdf-body">
             {sidebar === 'outline' && outline && (

@@ -30,6 +30,7 @@ import { armColorInput, toPickerHex } from '../color-input'
 import { nextPreset, prevPreset } from '../zoom-steps'
 import { TABLE_SHADING_COLORS } from './table-shading-colors'
 import { useI18n, type StringKey } from '../i18n/locale'
+import { slidesPlatform } from '../platform'
 import {
   IconSlideMaster,
   IconBullets,
@@ -2481,6 +2482,7 @@ export function Ribbon({
           </>
         ) : tab === 'review' ? (
           <>
+            {slidesPlatform().ai && (
             <Group label={t('ribbonGroupProofing')}>
               <button
                 className="rb-big"
@@ -2535,7 +2537,8 @@ export function Ribbon({
                 )}
               </div>
             </Group>
-            <div className="ribbon-sep" />
+            )}
+            {slidesPlatform().ai && <div className="ribbon-sep" />}
             <Group label={t('ribbonGroupComments')}>
               <button
                 className="rb-big"
