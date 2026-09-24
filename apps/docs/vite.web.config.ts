@@ -9,17 +9,35 @@ export default defineConfig({
   base: '/app/docs/',
   plugins: [react()],
   resolve: {
-    alias: {
-      '@host': resolve(root, 'src/renderer/host-web.ts'),
-      '@genoffice/platform': resolve(root, '../../packages/platform/src/index.ts'),
-      '@genoffice/platform-web': resolve(root, '../../packages/platform-web/src/index.ts'),
-      'docs-electron-platform': resolve(root, 'src/renderer/platform-electron.web.ts'),
-      '@genoffice/docx-engine/lazy-media': resolve(
-        root,
-        '../../packages/docx-engine/src/lazy-media.ts',
-      ),
-      '@genoffice/docx-engine': resolve(root, '../../packages/docx-engine/src/index.ts'),
-    },
+    alias: [
+      { find: '@host', replacement: resolve(root, 'src/renderer/host-web.ts') },
+      {
+        find: '@genoffice/platform-web',
+        replacement: resolve(root, '../../packages/platform-web/src/index.ts'),
+      },
+      {
+        find: '@genoffice/platform',
+        replacement: resolve(root, '../../packages/platform/src/index.ts'),
+      },
+      {
+        find: 'docs-electron-platform',
+        replacement: resolve(root, 'src/renderer/platform-electron.web.ts'),
+      },
+      // Relative imports of the desktop adapter stay on the real file for CLI
+      // tests and tsc. The web bundle must not ship that module.
+      {
+        find: /(?:^|[/\\])platform-electron\.ts$/,
+        replacement: resolve(root, 'src/renderer/platform-electron.web.ts'),
+      },
+      {
+        find: '@genoffice/docx-engine/lazy-media',
+        replacement: resolve(root, '../../packages/docx-engine/src/lazy-media.ts'),
+      },
+      {
+        find: '@genoffice/docx-engine',
+        replacement: resolve(root, '../../packages/docx-engine/src/index.ts'),
+      },
+    ],
   },
   build: {
     outDir: resolve(root, '../../dist/web/app/docs'),

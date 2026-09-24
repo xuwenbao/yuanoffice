@@ -5,7 +5,7 @@
  */
 import { createPlatformSlot, type AgentControlPort, type DocumentRef } from '@genoffice/platform'
 import type { DesktopApi } from '../shared/ipc'
-import { createElectronDocsPlatform } from 'docs-electron-platform'
+import { createElectronDocsPlatform } from './platform-electron.ts'
 
 /** Desktop keeps the in-app agent. The browser host sets this to null. */
 export interface DocsAiPort {
