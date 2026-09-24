@@ -26,7 +26,7 @@ export default defineConfig({
       // Relative imports of the desktop adapter stay on the real file for CLI
       // tests and tsc. The web bundle must not ship that module.
       {
-        find: /(?:^|[/\\])platform-electron\.ts$/,
+        find: /(?:^|[/\\])platform-electron(?:\.ts)?$/,
         replacement: resolve(root, 'src/renderer/platform-electron.web.ts'),
       },
       {
