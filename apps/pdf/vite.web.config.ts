@@ -24,12 +24,27 @@ export default defineConfig({
     }),
   ],
   resolve: {
-    alias: {
-      '@host': resolve(root, 'src/renderer/host-web.ts'),
-      'pdf-electron-platform': resolve(root, 'src/renderer/platform-electron.web.ts'),
-      '@genoffice/platform': resolve(root, '../../packages/platform/src/index.ts'),
-      '@genoffice/platform-web': resolve(root, '../../packages/platform-web/src/index.ts'),
-    },
+    alias: [
+      { find: '@host', replacement: resolve(root, 'src/renderer/host-web.ts') },
+      {
+        find: 'pdf-electron-platform',
+        replacement: resolve(root, 'src/renderer/platform-electron.web.ts'),
+      },
+      // Relative imports resolve for unit tests and tsc. The web bundle
+      // replaces the desktop adapter so it is not shipped.
+      {
+        find: /(?:^|[/\\])platform-electron(?:\.ts)?$/,
+        replacement: resolve(root, 'src/renderer/platform-electron.web.ts'),
+      },
+      {
+        find: '@genoffice/platform-web',
+        replacement: resolve(root, '../../packages/platform-web/src/index.ts'),
+      },
+      {
+        find: '@genoffice/platform',
+        replacement: resolve(root, '../../packages/platform/src/index.ts'),
+      },
+    ],
   },
   build: {
     outDir: resolve(root, '../../dist/web/app/pdf'),
