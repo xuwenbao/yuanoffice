@@ -24,6 +24,7 @@ import { createSystemFontMetrics, resetFontRegistry } from './fonts'
 import { tiffToPng } from './tiff-decode'
 import { neutralizeJpegOrientation } from './jpeg-orientation'
 import { displayMime } from './media-mime'
+import { renderSlide, renderSlides } from '../domain/document'
 import { sessions, type HistorySnapshot, type OpLogEntry, type Session } from '../domain/session'
 
 export { sessions }
@@ -334,13 +335,11 @@ export function resetFontMetrics(): void {
 }
 
 export function buildAllRenderSlides(opened: OpenedPptx, fitWidthPx: number): RenderSlide[] {
-  return opened.deck.slides.map((s, i) =>
-    buildRenderSlide(s, opened.deck.size, {
-      fitWidthPx,
-      media: makeMediaResolver(opened, s.path),
-      metrics: getFontMetrics(),
-      slideNo: i + 1,
-    }),
+  return renderSlides(
+    opened,
+    fitWidthPx,
+    (slidePath) => makeMediaResolver(opened, slidePath),
+    getFontMetrics(),
   )
 }
 
@@ -432,12 +431,14 @@ export function makeMediaResolver(opened: OpenedPptx, slidePath?: string) {
 export function rebuildSlide(session: Session, slideIndex: number): RenderSlide | null {
   const slide = session.opened.deck.slides[slideIndex]
   if (!slide) return null
-  return buildRenderSlide(slide, session.opened.deck.size, {
-    fitWidthPx: session.fitWidthPx,
-    media: makeMediaResolver(session.opened, slide.path),
-    metrics: getFontMetrics(),
-    slideNo: slideIndex + 1,
-  })
+  return renderSlide(
+    session.opened,
+    slide,
+    session.fitWidthPx,
+    makeMediaResolver(session.opened, slide.path),
+    getFontMetrics(),
+    slideIndex + 1,
+  )
 }
 
 /**

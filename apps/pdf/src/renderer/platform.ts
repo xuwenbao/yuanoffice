@@ -1,6 +1,6 @@
 import { createPlatformSlot, type AgentControlPort } from '@genoffice/platform'
 import type { PdfApi } from '../shared/ipc'
-import { createElectronPdfPlatform } from './platform-electron'
+import { createElectronPdfPlatform } from 'pdf-electron-platform'
 
 export interface PdfPlatform {
   api: PdfApi

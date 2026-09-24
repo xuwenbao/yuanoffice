@@ -18,7 +18,9 @@
       "@genoffice/file-parse": ["./src/types/file-parse.d.ts"],
       "@genoffice/docx-engine/math": ["./src/types/docx-engine-math.d.ts"],
       "@genoffice/platform": ["../../packages/platform/src/index.ts"],
-      "@genoffice/platform-web": ["../../packages/platform-web/src/index.ts"]
+      "@genoffice/platform-web": ["../../packages/platform-web/src/index.ts"],
+      "@host": ["./src/renderer/host-electron.ts"],
+      "sheets-electron-platform": ["./src/renderer/platform-electron.ts"]
     }
   },
   "include": [

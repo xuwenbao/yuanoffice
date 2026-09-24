@@ -73,6 +73,7 @@ export default defineConfig({
       alias: {
         ...workspaceAlias,
         '@host': resolve(here, 'src/renderer/host-electron.ts'),
+        'slides-electron-platform': resolve(here, 'src/renderer/platform-electron.ts'),
         '@genoffice/platform': resolve(here, '../../packages/platform/src/index.ts'),
       },
     },

@@ -1,6 +1,6 @@
 import { createPlatformSlot, type AgentControlPort } from '@genoffice/platform'
 import type { SlidesApi } from '../shared/ipc'
-import { createElectronSlidesPlatform } from './platform-electron'
+import { createElectronSlidesPlatform } from 'slides-electron-platform'
 
 export interface SlidesPlatform {
   api: SlidesApi

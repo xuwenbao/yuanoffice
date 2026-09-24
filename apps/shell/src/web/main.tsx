@@ -162,7 +162,7 @@ function Shell() {
               data-frame={tab.id}
               className={tab.editorId === active ? '' : 'back'}
               title={tab.title}
-              src={`/app/${tab.kind}/${tab.kind === 'docs' ? 'index.html' : 'web.html'}?path=${encodeURIComponent(tab.path)}&editorId=${encodeURIComponent(tab.editorId)}&shellFrame=${encodeURIComponent(tab.id)}`}
+              src={`/app/${tab.kind}/index.html?path=${encodeURIComponent(tab.path)}&editorId=${encodeURIComponent(tab.editorId)}&shellFrame=${encodeURIComponent(tab.id)}`}
             />
           ))}
         </div>

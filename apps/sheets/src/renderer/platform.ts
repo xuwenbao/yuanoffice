@@ -1,6 +1,6 @@
 import { createPlatformSlot, type AgentControlPort } from '@genoffice/platform'
 import type { DesktopApi } from '../shared/desktop-api'
-import { createElectronSheetsPlatform } from './platform-electron'
+import { createElectronSheetsPlatform } from 'sheets-electron-platform'
 
 export interface SheetsPlatform {
   api: DesktopApi

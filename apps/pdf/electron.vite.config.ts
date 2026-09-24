@@ -45,6 +45,7 @@ export default defineConfig({
     resolve: {
       alias: {
         '@host': join(pdfRoot, 'src/renderer/host-electron.ts'),
+        'pdf-electron-platform': join(pdfRoot, 'src/renderer/platform-electron.ts'),
         '@genoffice/platform': join(pdfRoot, '../../packages/platform/src/index.ts'),
       },
     },

@@ -17,6 +17,7 @@ import { installCanvasFontFallback, registerCellFontAliases } from './cell-font-
 import { LocaleProvider, setModuleLang } from './i18n/locale'
 import type { UiTheme } from '../shared/desktop-api'
 import './styles.css'
+import { installSheetsHost } from '@host'
 import { sheetsPlatform } from './platform'
 
 if (import.meta.hot) {
@@ -55,6 +56,7 @@ async function loadCellFonts(): Promise<void> {
 }
 
 async function bootstrap(): Promise<void> {
+  await installSheetsHost()
   let lang: Lang = 'zh'
   let theme: UiTheme = 'system'
   try {

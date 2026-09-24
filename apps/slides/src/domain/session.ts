@@ -1,9 +1,8 @@
 import type { OpenedPptx, Slide } from '@genoffice/pptx-engine'
 
 /**
- * Deck session record, moved out of the Electron main process so a browser
- * host can hold the same shape. Undo snapshots and IPC broadcasts stay in
- * apps/slides/src/main/session-state.ts until the document operations move.
+ * Deck session record, shared by the Electron main process and the browser
+ * host. Open, render, text, transform, and save live in document.ts.
  */
 export interface OpLogEntry {
   seq: number

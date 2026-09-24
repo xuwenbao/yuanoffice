@@ -94,7 +94,7 @@ Package `@genoffice/control-service`, started with `genoffice serve`.
 
 | Surface | Role |
 | --- | --- |
-| static `dist/web` | Shell at `/`, editors at `/app/<kind>/`, same origin |
+| static `dist/web` | Shell at `/`, editors at `/app/<kind>/`, same origin. `.mjs` is served as JavaScript so the PDF.js worker can load, and `.wasm` is served as `application/wasm` |
 | `GET/PUT /api/files/*` | List, stat, read, atomic write, and create a blank docx/xlsx/pptx/pdf inside the allowed roots. An empty list path returns those roots as directories. List and stat include `mtimeMs` and `sizeBytes` |
 | `GET /ws` | Editor channel and shell channel |
 | `POST /mcp` | JSON-RPC MCP: `initialize`, `tools/list`, `tools/call` |
@@ -161,7 +161,7 @@ Desktop registrations keep the old `--force` behaviour.
 | 1 Docs web | done | Platform packages, docs seam (`docsPlatform()`), web host at `dist/web/app/docs`, control-service file API. Web bundle has no `window.desktop`, `electron`, or `ai-provider`. Docx bytes round-trip through `/api/files`. |
 | 2 Live control | done | `editor-control`, `/mcp`, `genoffice editor`, lease, `--force` ignored for `source: "control-service"`. Playwright opens `/harness/editor.html`: apply changes the page and leaves the file unchanged. |
 | 3 Web shell | done | `apps/shell/src/web`: same-origin iframes, frame protocol, shell WebSocket (`open` / `focus`), IndexedDB drafts, route priority in `tabs.ts` (tested). The home page follows the desktop home (recent, starred, folders, new file) and talks only to the file API. |
-| 4 PDF, slides, sheets | done with gaps | PDF renderer seam plus a pdfium-wasm web page (`read_pdf`). Slides session record is in `src/domain/session.ts`; ops stay in the Electron main process. Sheets save pipeline is `src/gateway/workbook-save.ts`. The wasm reactor source is in tree; the wasm32-wasip1 link does not succeed yet (see gaps). |
+| 4 PDF, slides, sheets | done with gaps | The shell iframe for every kind is `/app/{kind}/index.html` (the desktop page). PDF opens through `ServiceFiles` into the existing viewer. Slides open, render, text, transform, and save live in `src/domain/document.ts`; the browser holds the deck with `pptx-engine` and the desktop main process calls those functions. Sheets mounts the Univer page. Opening a workbook needs the wasm reactor (see gaps). |
 
 ## 8. Known gaps
 
@@ -172,14 +172,26 @@ Absent on purpose, not a silent success:
 - Encrypted docx open, Zotero, headless export, and the in-app AI panel are
   desktop-only. The panel is not mounted when `ai` is null. `ai/tools.ts`
   stays, so an external command can still run the editor executors.
-- Slides document operations still live in the Electron main process. The
-  session record itself lives in `apps/slides/src/domain/session.ts`. The web
-  host can register a slides editor; ops that need the main-process session
-  answer `unsupported` until those functions move.
-- `pptx-engine` still mentions `Buffer` and Node built-ins. The web slides
-  entry does not import the engine. A browser-safety test guards the new
-  `bytes.ts` helper only.
-- Sheets `open` / `read_range` / `close` live in `apps/sheets/native/xlsx-engine/src/protocol.rs` and `wasm_api.rs`. On wasm32, indexing runs inline and `canonicalize` is skipped. `cargo check` of the native crate still succeeds. `cargo build --target wasm32-wasip1` fails in `zstd-sys`: the installed clang has no `wasm32-unknown-wasip1` target, so there is no reactor binary and no sidecar-parity run yet. The desktop sidecar command set stays in `main.rs`.
+- PDF annotation, drawing, form, and page-op saves need the desktop pdfium
+  pipeline. The browser host reads and writes the file bytes. A save that
+  includes those edits returns an error instead of writing a partial file.
+  System OCR and native dialogs are unavailable.
+- Slides ribbon commands beyond open, text, transform, undo, and save (layouts,
+  animations, comments, export, print) answer unavailable. The browser media
+  resolver serves archive bytes as data URLs and does not transcode TIFF.
+- The slides web host installs a small `Buffer` stand-in before the engine
+  loads, and package hashing uses `@noble/hashes` instead of `node:crypto`.
+  Inserting audio or video still needs Node `zlib` on the desktop. A
+  browser-safety test guards `bytes.ts` only.
+- Sheets `open` / `read_range` / `close` live in `protocol.rs` and `wasm_api.rs`.
+  `apps/sheets/scripts/build-wasm.ts` adds the `wasm32-wasip1` target and looks
+  for a wasi-sdk clang plus sysroot (`WASI_SDK_PATH` or `/opt/wasi-sdk`). This
+  machine has neither: Apple clang reports `wasm32-unknown-wasip1` as an
+  unknown target, and `zstd-sys` (pulled by the engine's C dependencies) fails
+  the same way. There is no `xlsx-sidecar.wasm`. The Univer page still mounts.
+  `selectWorkbook` throws and does not invent a workbook. Applying cell edits
+  is not in the reactor; an unchanged save writes the original bytes back
+  through the control service. The desktop sidecar command set stays in `main.rs`.
 
 ## 9. Upstream sync log
 

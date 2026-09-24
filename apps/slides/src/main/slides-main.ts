@@ -49,6 +49,14 @@ import {
   readBodyCapped,
 } from '@genoffice/electron-utils'
 import {
+  commitOpened,
+  deckDefaultFont,
+  deckDirty,
+  openDeck,
+  textEditRequest,
+  transformRequest,
+} from '../domain/document'
+import {
   resolveGroupChildId,
   runTxn,
   type Op,
@@ -111,7 +119,6 @@ import {
   reparseDeck,
   savePptx,
   savePptxToFile,
-  commitSaved,
   builtinLayoutInfos,
   ensureBuiltinLayout,
   shouldOfferBuiltinLayouts,
@@ -476,7 +483,7 @@ export async function saveSessionDeckTo(session: Session, filePath: string): Pro
   for (const id of attachedIds(session)) dropUntitledRecovery(id)
   await pushRecent(filePath)
   syncAttachedPaths(session, filePath)
-  commitSaved(session.opened)
+  commitOpened(session.opened)
   session.metaDirty = false
 }
 
@@ -839,7 +846,7 @@ async function openAndBuild(
   const raw = await readFile(path)
   const { bytes, recovered } = await maybeRecoverBytes(path, new Uint8Array(raw))
   await shapedMetricsReady() // Lay out only after complex-script shaped metrics are ready, avoiding an init race falling back to estimation
-  const opened = await openPptx(bytes)
+  const opened = await openDeck(bytes)
   adoptEmbeddedFonts(opened)
   sessions.set(wc.id, {
     path,
@@ -940,19 +947,6 @@ async function saveDraftAfterGenerate(
       '[slides] Failed to persist AI-generated draft to disk; the in-memory session still works:',
       err,
     )
-  }
-}
-
-/** Theme body (minor) Latin font: fallback shown in the ribbon font box when the selection has no text element. */
-function deckDefaultFont(opened: OpenedPptx): string | undefined {
-  try {
-    const slidePath = opened.archive.readPresentation().slidePaths[0]
-    if (!slidePath) return undefined
-    const themePath = opened.archive.resolveSlideChain(slidePath).themePath
-    const xml = themePath ? opened.archive.readText(themePath) : undefined
-    return xml ? parseTheme(xml).minorFont : undefined
-  } catch {
-    return undefined
   }
 }
 
@@ -1427,16 +1421,7 @@ export function registerSlidesIpc(): void {
     const session = sessions.get(e.sender.id)
     if (!session) return null
     pushHistory(session)
-    const r = journaledTxn(session, 'edit', {
-      ops: [
-        {
-          op: 'setText',
-          target: { slide: op.slideIndex, el: op.sourceId },
-          paragraphs: op.paragraphs,
-          ...(op.groupId ? { group: op.groupId } : {}),
-        },
-      ],
-    })
+    const r = journaledTxn(session, 'edit', textEditRequest(op))
     if (!r.applied) {
       session.undoStack.pop()
       return null
@@ -1546,43 +1531,7 @@ export function registerSlidesIpc(): void {
     slideIndex: number,
     fitWidthPx: number,
     item: Omit<EditTransformOp, 'slideIndex' | 'fitWidthPx' | 'preview'>,
-  ) => {
-    const slide = session.opened.deck.slides[slideIndex]
-    if (!slide) return null
-    const childId = item.groupId
-      ? resolveGroupChildId(slide, item.groupId, item.sourceId)
-      : item.sourceId
-    const grpChild = item.groupId ? findGroupChild(slide, item.groupId, childId) : null
-    if (item.groupId && !grpChild) return null
-    const baseWidthPx = session.opened.deck.size.cx / EMU_PER_PX_96
-    const scale = fitWidthPx / baseWidthPx
-    const toEmu = (px: number) => Math.round((px / scale) * EMU_PER_PX_96)
-    let box: { x: number; y: number; cx: number; cy: number }
-    if (grpChild) {
-      const ch = grpChild.grp.childOffset
-      const chX = ch?.x ?? grpChild.grp.transform.offset.x
-      const chY = ch?.y ?? grpChild.grp.transform.offset.y
-      const gExt = grpChild.grp.transform.offset
-      const gsx = ch?.cx ? gExt.cx / ch.cx : 1
-      const gsy = ch?.cy ? gExt.cy / ch.cy : 1
-      box = {
-        x: toEmu(item.xPx / gsx) + chX,
-        y: toEmu(item.yPx / gsy) + chY,
-        cx: toEmu(item.wPx / gsx),
-        cy: toEmu(item.hPx / gsy),
-      }
-    } else {
-      box = { x: toEmu(item.xPx), y: toEmu(item.yPx), cx: toEmu(item.wPx), cy: toEmu(item.hPx) }
-    }
-    return {
-      op: 'setTransform' as const,
-      target: { slide: slideIndex, el: item.sourceId },
-      box,
-      rotDeg: item.rotationDeg,
-      // Tables redistribute gridCol widths / tr heights so the file matches the frame
-      ...(item.groupId ? { group: item.groupId } : { resizeTableGrid: true }),
-    }
-  }
+  ) => transformRequest(session.opened, { ...item, slideIndex, fitWidthPx, preview: false })
 
   // Shim over the canonical setTransform op. Preview-gesture undo bookkeeping is a
   // surface concern and stays here.
@@ -4356,12 +4305,7 @@ export function registerSlidesIpc(): void {
   ipcMain.handle('slides:is-dirty', (e) => {
     const session = sessions.get(e.sender.id)
     if (!session) return false
-    return (
-      !!session.metaDirty ||
-      session.opened.deck.slides.some(
-        (s) => s.structureDirty || s.elements.some((el) => el.dirty || el.dirtyTransform),
-      )
-    )
+    return deckDirty(session)
   })
 
   ipcMain.handle('slides:save', async (e) => {
@@ -4384,7 +4328,7 @@ export function registerSlidesIpc(): void {
       // anchor.originalXml with disk) — a full reopen would re-read and unzip the
       // whole package, doubling save latency on large decks. Element ids survive,
       // but the renderer still expects the render tree in the response.
-      commitSaved(session.opened)
+      commitOpened(session.opened)
       session.metaDirty = false
       return {
         ok: true,
@@ -4413,7 +4357,7 @@ export function registerSlidesIpc(): void {
       dropUntitledRecovery(e.sender.id)
       await pushRecent(r.filePath)
       syncAttachedPaths(session, r.filePath)
-      commitSaved(session.opened)
+      commitOpened(session.opened)
       session.metaDirty = false
       return {
         ok: true,

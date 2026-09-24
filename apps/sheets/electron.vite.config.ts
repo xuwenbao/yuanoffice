@@ -36,6 +36,8 @@ export default defineConfig({
     plugins: [react()],
     resolve: {
       alias: {
+        '@host': resolve(here, 'src/renderer/host-electron.ts'),
+        'sheets-electron-platform': resolve(here, 'src/renderer/platform-electron.ts'),
         '@genoffice/platform': resolve(here, '../../packages/platform/src/index.ts'),
       },
     },

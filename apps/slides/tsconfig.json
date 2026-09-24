@@ -25,7 +25,8 @@
       "@genoffice/docx-engine/metafile": ["../../packages/docx-engine/src/metafile.ts"],
       "@genoffice/docx-engine/math": ["../../packages/docx-engine/src/math.ts"],
       "@genoffice/platform": ["../../packages/platform/src/index.ts"],
-      "@host": ["./src/renderer/host-electron.ts"]
+      "@host": ["./src/renderer/host-electron.ts"],
+      "slides-electron-platform": ["./src/renderer/platform-electron.ts"]
     }
   },
   "include": ["src", "tests", "electron.vite.config.ts", "vitest.config.ts"]

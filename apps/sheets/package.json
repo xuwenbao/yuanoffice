@@ -11,7 +11,7 @@
     "dev:renderer": "vite --config vite.renderer.config.ts",
     "dev:web": "vite --config vite.web.config.ts",
     "build:web": "vite build --config vite.web.config.ts",
-    "native:wasm": "cargo build --release --target wasm32-wasip1 --manifest-path native/xlsx-engine/Cargo.toml",
+    "native:wasm": "tsx scripts/build-wasm.ts",
     "build": "npm run native:build && electron-vite build",
     "native:build": "cargo build --release --manifest-path native/xlsx-engine/Cargo.toml --config native/xlsx-engine/.cargo/config.toml",
     "native:build:universal": "node scripts/build-sidecar-universal.mjs",
@@ -26,6 +26,7 @@
     "gate": "npm run typecheck && npm run fixtures && npm test && npm run compat"
   },
   "dependencies": {
+    "@bjorn3/browser_wasi_shim": "^0.4.2",
     "@fluentui/react-icons": "^2.0.333",
     "@genoffice/agent-core": "*",
     "@genoffice/ai-provider": "*",
@@ -34,8 +35,8 @@
     "@genoffice/electron-utils": "*",
     "@genoffice/file-parse": "*",
     "@genoffice/i18n": "*",
-    "@genoffice/ui": "*",
     "@genoffice/pptx-render": "*",
+    "@genoffice/ui": "*",
     "@genoffice/xlsx-gateway": "*",
     "@univerjs/core": "^0.25.1",
     "@univerjs/data-validation": "^0.25.1",
