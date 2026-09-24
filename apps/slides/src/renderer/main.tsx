@@ -15,6 +15,8 @@ import '@genoffice/ui/ai-panel-prefs.css'
 import '@genoffice/ui/ai-scope-quote.css'
 import './styles.css'
 import { applyAiPanelPrefs, installScreenTips } from '@genoffice/ui'
+import { slidesPlatform } from './platform'
+import { installSlidesHost } from '@host'
 
 installScreenTips()
 
@@ -39,14 +41,15 @@ function applyTheme(theme: UiTheme): void {
 }
 
 async function bootstrap(): Promise<void> {
+  await installSlidesHost()
   let lang: Lang = 'zh'
   let theme: UiTheme = 'system'
   try {
     // per-promise catch: standalone runs have no app:get-theme handler, and
     // that rejection must not drop a resolved language
     ;[lang, theme] = await Promise.all([
-      window.slidesApi.getLanguage().catch(() => 'zh' as const),
-      window.slidesApi.getTheme().catch(() => 'system' as const),
+      slidesPlatform().api.getLanguage().catch(() => 'zh' as const),
+      slidesPlatform().api.getTheme().catch(() => 'system' as const),
     ])
   } catch {
     /* dev renderer without the preload bridge */
@@ -56,12 +59,12 @@ async function bootstrap(): Promise<void> {
   // the audience show window renders slide content only — it never themes
   if (mode !== 'audience') {
     applyTheme(theme)
-    window.slidesApi?.onThemeChanged(applyTheme)
-    void window.slidesApi
+    slidesPlatform().api?.onThemeChanged(applyTheme)
+    void slidesPlatform().api
       ?.getAiPanelPrefs?.()
       .then(applyAiPanelPrefs)
       .catch(() => {})
-    window.slidesApi?.onAiPanelPrefsChanged?.(applyAiPanelPrefs)
+    slidesPlatform().api?.onAiPanelPrefsChanged?.(applyAiPanelPrefs)
   }
   createRoot(document.getElementById('root')!).render(
     <React.StrictMode>

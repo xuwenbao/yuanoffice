@@ -1,3 +1,4 @@
+import { docsPlatform } from '../platform'
 import { aiPanelWidthAtPointer, AiPanelSideButton } from '@genoffice/ui'
 import { useEffect, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/core'
@@ -397,7 +398,7 @@ export function AiPanel({
     for (const a of wanted) {
       if (!ATTACHMENT_IMAGE_EXTS.has(a.ext) || previewRequestedRef.current.has(a.path)) continue
       previewRequestedRef.current.add(a.path)
-      void window.desktop
+      void docsPlatform().api
         .readAttachmentImage(a.path)
         .then((r) => {
           if (!previewRequestedRef.current.has(a.path)) return // removed while the read was in flight
@@ -479,7 +480,7 @@ export function AiPanel({
     let alive = true
     const refresh = () => {
       // tests render the panel without a preload bridge
-      void window.desktop
+      void docsPlatform().api
         ?.aiGskStatus?.()
         .then((s) => {
           if (alive) gskLoggedInRef.current = !!s?.loggedIn
@@ -864,7 +865,7 @@ export function AiPanel({
           })
           // Signed-out failures get an inline sign-in button; detected via
           // gsk status rather than matching the localized error text
-          void window.desktop
+          void docsPlatform().api
             .aiGskStatus()
             .then((status) => {
               if (status.loggedIn) return
@@ -975,7 +976,7 @@ export function AiPanel({
     const images: AgentImage[] = []
     const failures: string[] = []
     for (const att of imageAtts.slice(0, MAX_IMAGES_PER_MESSAGE)) {
-      const result = await window.desktop.readAttachmentImage(att.path)
+      const result = await docsPlatform().api.readAttachmentImage(att.path)
       if (result.ok && result.base64 && result.mime) {
         images.push({ base64: result.base64, mime: result.mime })
       } else {
@@ -1147,31 +1148,31 @@ export function AiPanel({
     }
   }
 
-  const pickAttachments = async () => mergeAttachments(await window.desktop.pickAttachments())
+  const pickAttachments = async () => mergeAttachments(await docsPlatform().api.pickAttachments())
 
   const onDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setDragOver(false)
     const paths = Array.from(e.dataTransfer.files)
-      .map((f) => window.desktop.getPathForFile(f))
+      .map((f) => docsPlatform().api.getPathForFile(f))
       .filter(Boolean)
-    if (paths.length > 0) mergeAttachments(await window.desktop.addAttachmentPaths(paths))
+    if (paths.length > 0) mergeAttachments(await docsPlatform().api.addAttachmentPaths(paths))
   }
 
   /** Files pasted into the input: ones with a local path go through regular attachments; pure bitmaps like screenshots hit a temp file first */
   const onPasteFiles = async (files: File[]) => {
     const paths: string[] = []
     for (const f of files) {
-      const p = window.desktop.getPathForFile(f)
+      const p = docsPlatform().api.getPathForFile(f)
       if (p) {
         paths.push(p)
         continue
       }
       const ext = PASTE_MIME_EXT[f.type] ?? f.name.split('.').pop()?.toLowerCase() ?? 'bin'
-      mergeAttachments(await window.desktop.addPastedImage(await f.arrayBuffer(), ext))
+      mergeAttachments(await docsPlatform().api.addPastedImage(await f.arrayBuffer(), ext))
     }
-    if (paths.length > 0) mergeAttachments(await window.desktop.addAttachmentPaths(paths))
+    if (paths.length > 0) mergeAttachments(await docsPlatform().api.addAttachmentPaths(paths))
   }
 
   const removeAttachment = (path: string) =>
@@ -1288,7 +1289,7 @@ export function AiPanel({
         <div className="ai-panel-header-actions">
           <AiPanelSideButton
             lang={lang}
-            onMove={(side) => window.desktop.setAiPanelPrefs({ side })}
+            onMove={(side) => docsPlatform().api.setAiPanelPrefs({ side })}
           />
           {(chat.length > 0 || historicChat.length > 0) && (
             <button
@@ -1408,7 +1409,7 @@ export function AiPanel({
                 <div className="ai-msg-error">{t('aiErrorPrefix', { error: entry.error })}</div>
               )}
               {entry.loginRequired && (
-                <button className="ai-login-btn" onClick={() => void window.desktop.aiGskLogin()}>
+                <button className="ai-login-btn" onClick={() => void docsPlatform().api.aiGskLogin()}>
                   {t('aiGskLoginBtn')}
                 </button>
               )}

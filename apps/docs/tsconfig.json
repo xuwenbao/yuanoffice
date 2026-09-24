@@ -16,7 +16,11 @@
       "@genoffice/electron-utils": ["../../packages/electron-utils/src/index.ts"],
       "@genoffice/ai-provider": ["../../packages/ai-provider/src/index.ts"],
       "@genoffice/i18n": ["../../packages/i18n/src/index.ts"],
-      "@genoffice/ui": ["../../packages/ui/src/index.ts"]
+      "@genoffice/ui": ["../../packages/ui/src/index.ts"],
+      "@genoffice/platform": ["../../packages/platform/src/index.ts"],
+      "@genoffice/platform-web": ["../../packages/platform-web/src/index.ts"],
+      "@host": ["./src/renderer/host-electron.ts"],
+      "docs-electron-platform": ["./src/renderer/platform-electron.ts"]
     }
   },
   "include": ["src", "tests", "electron.vite.config.ts", "vitest.config.ts"]

@@ -22,6 +22,7 @@ import { saveDefaultShapeStyle, shapeStyleOf } from './default-shape'
 import { layoutLabel } from './layout-names'
 import { t } from './i18n/locale'
 import { groupSections, setAllCollapsed } from './section-groups'
+import { slidesPlatform } from './platform'
 
 export function buildCtxItems(ctx: ActionCtx): Array<CtxItem | null> {
   const { ctxMenu, slides, sections, selectedIds, slide, current } = ctx
@@ -226,7 +227,7 @@ export function buildCtxItems(ctx: ActionCtx): Array<CtxItem | null> {
       fn()
     }
     const native = (op: 'cut' | 'copy' | 'paste') =>
-      onSel(() => void window.slidesApi.nativeClipboard(op))
+      onSel(() => void slidesPlatform().api.nativeClipboard(op))
     const editedId = ctx.editing?.sourceId ?? ctx.editingCell?.sourceId
     return [
       { label: t('appCtxCut'), hint: '⌘X', disabled: ctxMenu.collapsed, onClick: native('cut') },
@@ -348,7 +349,7 @@ export function buildCtxItems(ctx: ActionCtx): Array<CtxItem | null> {
         {
           label: t('appCtxCellAnchorTop'),
           onClick: () =>
-            void window.slidesApi
+            void slidesPlatform().api
               .setTableCellAnchor({
                 slideIndex: current,
                 sourceId: ctxMenu.targetId,
@@ -361,7 +362,7 @@ export function buildCtxItems(ctx: ActionCtx): Array<CtxItem | null> {
         {
           label: t('appCtxCellAnchorMiddle'),
           onClick: () =>
-            void window.slidesApi
+            void slidesPlatform().api
               .setTableCellAnchor({
                 slideIndex: current,
                 sourceId: ctxMenu.targetId,
@@ -374,7 +375,7 @@ export function buildCtxItems(ctx: ActionCtx): Array<CtxItem | null> {
         {
           label: t('appCtxCellAnchorBottom'),
           onClick: () =>
-            void window.slidesApi
+            void slidesPlatform().api
               .setTableCellAnchor({
                 slideIndex: current,
                 sourceId: ctxMenu.targetId,
@@ -402,7 +403,7 @@ export function buildCtxItems(ctx: ActionCtx): Array<CtxItem | null> {
           label: t('appCtxCellShading'),
           swatches: [...TABLE_SHADING_COLORS, 'none'],
           onSwatch: (c) =>
-            void window.slidesApi
+            void slidesPlatform().api
               .editTableStyle({
                 slideIndex: current,
                 sourceId: ctxMenu.targetId,

@@ -1,3 +1,4 @@
+import { docsPlatform } from '../platform'
 import { useEffect, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/core'
 import type { Command } from '@tiptap/pm/state'
@@ -123,7 +124,7 @@ export function EditorContextMenu({
     window.addEventListener('blur', onClose)
     // shell tab-strip presses never reach this document; the preload relays
     // them (app:chrome-pressed) so the menu still dismisses
-    const offChrome = window.desktop?.onChromePressed?.(onClose)
+    const offChrome = docsPlatform().api?.onChromePressed?.(onClose)
     return () => {
       window.removeEventListener('mousedown', close)
       window.removeEventListener('keydown', onKey)

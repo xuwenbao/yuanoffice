@@ -11,12 +11,13 @@ import { renderSlidesToPngBase64 } from './export-render'
 import { movedBlockPositions, rangeSelection } from '../shared/slide-selection'
 import { t } from './i18n/locale'
 import { currentAfterRemoval, groupSections, indexRange } from './section-groups'
+import { slidesPlatform } from './platform'
 
 const sortUnique = (indexes: number[]): number[] => [...new Set(indexes)].sort((a, b) => a - b)
 
 export async function addSlide(ctx: ActionCtx): Promise<void> {
   if (!ctx.slide) return
-  const r = await window.slidesApi.addBlankSlide({
+  const r = await slidesPlatform().api.addBlankSlide({
     sourceIndex: ctx.current,
     fitWidthPx: FIT_WIDTH,
   })
@@ -34,7 +35,7 @@ export async function addSlide(ctx: ActionCtx): Promise<void> {
 export async function addSlideAt(ctx: ActionCtx, pos: number): Promise<void> {
   if (!ctx.slides.length) return
   const before = pos <= 0
-  const r = await window.slidesApi.addBlankSlide({
+  const r = await slidesPlatform().api.addBlankSlide({
     sourceIndex: before ? 0 : Math.min(pos, ctx.slides.length) - 1,
     fitWidthPx: FIT_WIDTH,
     ...(before ? { before: true } : {}),
@@ -55,13 +56,13 @@ export async function setSlideLayoutAt(
   index: number,
   layoutPath?: string,
 ): Promise<void> {
-  const r = await window.slidesApi.setSlideLayout({ slideIndex: index, layoutPath })
+  const r = await slidesPlatform().api.setSlideLayout({ slideIndex: index, layoutPath })
   if (r) ctx.applySlide(index, r)
 }
 
 export async function addSlideWithLayout(ctx: ActionCtx, layoutPath: string): Promise<void> {
   if (!ctx.slide) return
-  const r = await window.slidesApi.addSlideWithLayout({
+  const r = await slidesPlatform().api.addSlideWithLayout({
     sourceIndex: ctx.current,
     layoutPath,
     fitWidthPx: FIT_WIDTH,
@@ -80,7 +81,7 @@ export async function addSlideWithLayout(ctx: ActionCtx, layoutPath: string): Pr
 export async function duplicateSlides(ctx: ActionCtx, indexes: number[]): Promise<void> {
   const sel = sortUnique(indexes)
   if (!sel.length) return
-  const r = await window.slidesApi.duplicateSlides({ slideIndexes: sel, fitWidthPx: FIT_WIDTH })
+  const r = await slidesPlatform().api.duplicateSlides({ slideIndexes: sel, fitWidthPx: FIT_WIDTH })
   if (r) {
     ctx.setSlides(r.slides)
     ctx.setCurrent(r.index)
@@ -99,7 +100,7 @@ export async function deleteSlides(ctx: ActionCtx, indexes: number[]): Promise<v
     sel = sel.slice(1)
   }
   if (!sel.length) return
-  const r = await window.slidesApi.deleteSlides({ slideIndexes: sel })
+  const r = await slidesPlatform().api.deleteSlides({ slideIndexes: sel })
   if (!r) return
   const next = Math.min(sel[sel.length - 1]! + 1 - sel.length, r.length - 1)
   ctx.setSlides(r)
@@ -125,7 +126,7 @@ export async function cutSlides(ctx: ActionCtx, indexes: number[]): Promise<void
   } catch {
     pngs = undefined
   }
-  const ok = await window.slidesApi.copySlides({ slideIndexes: sel, ...(pngs ? { pngs } : {}) })
+  const ok = await slidesPlatform().api.copySlides({ slideIndexes: sel, ...(pngs ? { pngs } : {}) })
   if (!ok) {
     ctx.setStatus(t('appStatusSlideCopyFailed'))
     return
@@ -138,7 +139,7 @@ export async function cutSlides(ctx: ActionCtx, indexes: number[]): Promise<void
 // ── Section management ─────────────────────────────────────────────────
 
 export async function addSectionAt(ctx: ActionCtx, index: number): Promise<void> {
-  const r = await window.slidesApi.addSection({
+  const r = await slidesPlatform().api.addSection({
     atSlideIndex: index,
     name: t('appSectionUntitled'),
   })
@@ -150,7 +151,7 @@ export async function addSectionAt(ctx: ActionCtx, index: number): Promise<void>
 }
 
 export async function renameSectionTo(ctx: ActionCtx, id: string, name: string): Promise<void> {
-  const r = await window.slidesApi.renameSection({ id, name })
+  const r = await slidesPlatform().api.renameSection({ id, name })
   if (r) {
     ctx.setSections(r)
     ctx.setDirty(true)
@@ -161,8 +162,8 @@ export async function renameSectionTo(ctx: ActionCtx, id: string, name: string):
 export async function removeSectionAt(ctx: ActionCtx, id: string | null): Promise<void> {
   const r =
     id == null
-      ? await window.slidesApi.setSections(absorbLead(ctx))
-      : await window.slidesApi.removeSection({ id })
+      ? await slidesPlatform().api.setSections(absorbLead(ctx))
+      : await slidesPlatform().api.removeSection({ id })
   if (r) {
     ctx.setSections(r)
     ctx.setDirty(true)
@@ -180,7 +181,7 @@ function absorbLead(ctx: ActionCtx): SectionInfo[] {
 }
 
 export async function removeAllSections(ctx: ActionCtx): Promise<void> {
-  const r = await window.slidesApi.setSections([])
+  const r = await slidesPlatform().api.setSections([])
   if (r) {
     ctx.setSections(r)
     ctx.setDirty(true)
@@ -191,7 +192,7 @@ export async function removeAllSections(ctx: ActionCtx): Promise<void> {
 export async function removeSectionWithSlides(ctx: ActionCtx, id: string | null): Promise<void> {
   const group = groupSections(ctx.sections, ctx.slides.length)?.find((g) => g.id === id)
   if (!group) return
-  const r = await window.slidesApi.removeSectionSlides({ id })
+  const r = await slidesPlatform().api.removeSectionSlides({ id })
   if (!r) {
     if (group.end - group.start >= ctx.slides.length) ctx.setStatus(t('appStatusKeepOneSlide'))
     return
@@ -210,7 +211,7 @@ export async function moveSectionDir(
   id: string,
   dir: 'up' | 'down',
 ): Promise<void> {
-  const r = await window.slidesApi.moveSection({ id, dir })
+  const r = await slidesPlatform().api.moveSection({ id, dir })
   if (r) {
     ctx.setSlides(r.slides)
     ctx.setSections(r.sections)
@@ -230,7 +231,7 @@ export async function moveSlidesTo(
   const sel = sortUnique(indexes)
   const landed = movedBlockPositions(sel, insertAt)
   if (sel.every((i, k) => i === landed[k])) return
-  const r = await window.slidesApi.moveSlides({ slideIndexes: sel, insertAt })
+  const r = await slidesPlatform().api.moveSlides({ slideIndexes: sel, insertAt })
   if (r) {
     const anchor = landed[Math.max(0, sel.indexOf(ctx.current))]!
     ctx.setSlides(r.slides)

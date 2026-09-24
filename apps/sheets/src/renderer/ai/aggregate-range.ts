@@ -14,6 +14,7 @@ import type { CellScalar } from '@genoffice/xlsx-gateway/domain/workbook.types'
 import { isSheetRemoved, journalEntriesInRange } from '../edit-journal'
 import { createRangeAggregator, type RangeAggregate } from './aggregate'
 import type { WorkbookReadContext } from './workbook-readers'
+import { sheetsPlatform } from '../platform'
 
 interface ConstantFill {
   readonly startRow: number
@@ -392,7 +393,7 @@ export async function aggregateWorkbookRange(
         continue
       let result
       try {
-        result = await window.desktopApi.readWorkbookRange({
+        result = await sheetsPlatform().api.readWorkbookRange({
           sessionId: state.file.sessionId,
           sheetId,
           range: batchBounds,

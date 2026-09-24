@@ -45,7 +45,17 @@ export function parseEnvelope(line: string): ControlEnvelope | null {
   if (!raw || typeof raw !== 'object') return null
   const env = raw as Partial<ControlEnvelope>
   if (typeof env.token !== 'string' || !env.request || typeof env.request !== 'object') return null
-  const req = env.request as Partial<ControlRequest>
+  const req = env.request as Partial<ControlRequest> & { doc?: unknown }
+  if (req.cmd === 'editor-list') return env as ControlEnvelope
+  if (
+    req.cmd === 'editor-read' ||
+    req.cmd === 'editor-status' ||
+    req.cmd === 'editor-apply' ||
+    req.cmd === 'editor-save'
+  ) {
+    if (typeof req.doc !== 'string') return null
+    return env as ControlEnvelope
+  }
   if ((req.cmd !== 'open' && req.cmd !== 'selection') || typeof req.path !== 'string') return null
   return env as ControlEnvelope
 }

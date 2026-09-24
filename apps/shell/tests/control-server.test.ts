@@ -3,7 +3,7 @@ import { connect } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { ControlReply, ControlRequest } from '@genoffice/cli/control-protocol'
+import { CONTROL_PROTOCOL, type ControlReply, type ControlRequest } from '@genoffice/cli/control-protocol'
 import { controlHandler, type ControlHost } from '../src/main/control-handlers'
 import { parseEnvelope, startControlServer, type ControlServer } from '../src/main/control-server'
 
@@ -35,7 +35,7 @@ describe('control server', () => {
     servers.push(server)
     const published = JSON.parse(readFileSync(join(userData, 'control.json'), 'utf8'))
     expect(published).toMatchObject({
-      protocol: 1,
+      protocol: CONTROL_PROTOCOL,
       pid: process.pid,
       endpoint: server.endpoint.endpoint,
     })

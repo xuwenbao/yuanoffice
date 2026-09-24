@@ -99,6 +99,7 @@ import {
   applyAiTableRowDelete,
 } from './workbook-ops'
 import type { ChartEditData, ShapeEditChanges } from './WorkbookVisuals'
+import { sheetsPlatform } from './platform'
 
 export type PlannedOp = StructuralChange['op']
 
@@ -187,7 +188,7 @@ export async function prefetchOpImages(
     let mediaType: string
     // file:// = a BYOK-generated image in the local store (fetchImage resolves it)
     if (/^(https?|file):\/\//i.test(op.path)) {
-      const fetched = await window.desktopApi.fetchImage(op.path)
+      const fetched = await sheetsPlatform().api.fetchImage(op.path)
       if (!fetched) throw new Error(t('appCannotReadImage'))
       // Trust the bytes, not the Content-Type header the handler echoed
       const sniffed = sniffImageMime(fetched.base64)
@@ -197,7 +198,7 @@ export async function prefetchOpImages(
       dataUrl = `data:${sniffed};base64,${fetched.base64}`
       mediaType = sniffed
     } else {
-      const image = await window.desktopApi.readLocalImage({ path: op.path })
+      const image = await sheetsPlatform().api.readLocalImage({ path: op.path })
       dataUrl = `data:${image.mediaType};base64,${image.base64}`
       mediaType = image.mediaType
     }

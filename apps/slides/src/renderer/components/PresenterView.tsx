@@ -31,6 +31,7 @@ import {
   type ShowKeyState,
   type ShowScreen,
 } from '../show-keys'
+import { slidesPlatform } from '../platform'
 import { liftShowCurtain } from '../show-actions'
 
 /** Layout constants (aligned with styles.css) */
@@ -122,10 +123,10 @@ export function PresenterView({
 
   useEffect(() => {
     let cancelled = false
-    void Promise.all(slides.map((_, i) => window.slidesApi.getAnimations(i))).then((lists) => {
+    void Promise.all(slides.map((_, i) => slidesPlatform().api.getAnimations(i))).then((lists) => {
       if (!cancelled) setAllAnims(lists)
     })
-    void Promise.all(slides.map((_, i) => window.slidesApi.getNotes(i))).then((notes) => {
+    void Promise.all(slides.map((_, i) => slidesPlatform().api.getNotes(i))).then((notes) => {
       if (!cancelled) setAllNotes(notes)
     })
     return () => {
@@ -147,12 +148,12 @@ export function PresenterView({
   // ── Multi-screen: open the audience window on entry, close on exit ─────────────
   useEffect(() => {
     let disposed = false
-    void window.slidesApi.presenterStart().then((r) => {
+    void slidesPlatform().api.presenterStart().then((r) => {
       if (!disposed) setHasAudience(r.audience)
     })
     return () => {
       disposed = true
-      void window.slidesApi.presenterEnd()
+      void slidesPlatform().api.presenterEnd()
     }
   }, [])
 
@@ -167,14 +168,14 @@ export function PresenterView({
       black: blank === 'black',
       white: blank === 'white',
     }
-    window.slidesApi.presenterSync(state)
+    slidesPlatform().api.presenterSync(state)
   }, [player.epoch, player.played, player.playing, ended, blank])
 
   // Clear ink on page turn (the audience side clears in sync)
   useEffect(() => {
     setStrokes([])
     setLaser(null)
-    window.slidesApi.presenterInk({ type: 'clear' })
+    slidesPlatform().api.presenterInk({ type: 'clear' })
   }, [pos])
 
   const exitRef = useRef(() => {})
@@ -190,7 +191,7 @@ export function PresenterView({
     // the tab strip and snaps the window (macOS simpleFullScreen, no Space animation);
     // HTML fullscreen is only used off-macOS where it is instant.
     let alive = true
-    const snapped = window.slidesApi.setShowFullScreen?.(true) ?? Promise.resolve()
+    const snapped = slidesPlatform().api.setShowFullScreen?.(true) ?? Promise.resolve()
     void snapped
       .catch(() => {})
       .then(() => {
@@ -217,7 +218,7 @@ export function PresenterView({
       alive = false
       if (!keepFsRef.current) {
         if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
-        void window.slidesApi.setShowFullScreen?.(false)
+        void slidesPlatform().api.setShowFullScreen?.(false)
       }
       liftShowCurtain()
     }
@@ -265,7 +266,7 @@ export function PresenterView({
   prevRef.current = prev
   useEffect(
     () =>
-      window.slidesApi.onAudienceNav((action) => {
+      slidesPlatform().api.onAudienceNav((action) => {
         const r = reduceAudienceNav(showKeysRef.current, action)
         setKeys(r.state)
         if (r.action.type === 'next') nextRef.current()
@@ -324,7 +325,7 @@ export function PresenterView({
   const clearInk = useCallback(() => {
     setStrokes([])
     setLaser(null)
-    window.slidesApi.presenterInk({ type: 'clear' })
+    slidesPlatform().api.presenterInk({ type: 'clear' })
   }, [])
 
   // ── Ink pointer events (normalized coordinates, each side restores its own) ────────────
@@ -345,7 +346,7 @@ export function PresenterView({
       e.currentTarget.setPointerCapture(e.pointerId)
       drawingRef.current = true
       setStrokes((ss) => [...ss, { color: PEN_COLOR, points: [p.x, p.y] }])
-      window.slidesApi.presenterInk({ type: 'stroke-start', x: p.x, y: p.y, color: PEN_COLOR })
+      slidesPlatform().api.presenterInk({ type: 'stroke-start', x: p.x, y: p.y, color: PEN_COLOR })
     },
     [tool, normPoint],
   )
@@ -360,7 +361,7 @@ export function PresenterView({
           if (!last) return ss
           return [...ss.slice(0, -1), { ...last, points: [...last.points, p.x, p.y] }]
         })
-        window.slidesApi.presenterInk({ type: 'stroke-move', x: p.x, y: p.y })
+        slidesPlatform().api.presenterInk({ type: 'stroke-move', x: p.x, y: p.y })
       } else if (tool === 'laser') {
         const p = normPoint(e)
         if (!p) return
@@ -368,7 +369,7 @@ export function PresenterView({
         const now = performance.now()
         if (now - laserSentAtRef.current > 30) {
           laserSentAtRef.current = now
-          window.slidesApi.presenterInk({ type: 'laser', x: p.x, y: p.y })
+          slidesPlatform().api.presenterInk({ type: 'laser', x: p.x, y: p.y })
         }
       }
     },
@@ -382,7 +383,7 @@ export function PresenterView({
   const onStagePointerLeave = useCallback(() => {
     if (tool === 'laser') {
       setLaser(null)
-      window.slidesApi.presenterInk({ type: 'laser', x: -1, y: -1 })
+      slidesPlatform().api.presenterInk({ type: 'laser', x: -1, y: -1 })
     }
   }, [tool])
 
@@ -416,7 +417,7 @@ export function PresenterView({
         <button
           className="pv-top-btn"
           disabled={!hasAudience}
-          onClick={() => void window.slidesApi.presenterSwap()}
+          onClick={() => void slidesPlatform().api.presenterSwap()}
           data-tip={hasAudience ? t('panePresenterSwapTip') : t('panePresenterNoSecond')}
         >
           ⇄ {t('panePresenterSwap')}

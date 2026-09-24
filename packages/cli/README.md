@@ -36,6 +36,12 @@ genoffice convert page.html --to docx                 # html2docx, same as the H
 genoffice convert report.docx --to md                 # GFM via the markdown editor's serializer
 genoffice convert book.xlsx --to csv [--sheet Data]   # one sheet, cell text as displayed, UTF-8 BOM, CRLF
 genoffice capabilities --json                        # which cloud features GenOffice has configured (no network call)
+genoffice editor list --json                         # documents open in the browser editor
+genoffice editor read --doc report.docx --json       # editor memory, including unsaved edits; does not write the file
+genoffice editor apply --doc report.docx --ops ops.json --json   # change the open page; the file stays untouched until editor save
+genoffice editor status --doc report.docx --json
+genoffice editor save --doc report.docx [--path copy.docx --overwrite] --json
+genoffice serve --root ~/Documents [--port 8787] [--static dist/web]
 genoffice search "electron headless export" [--images] [--max 6] --json
 genoffice image "isometric office, soft light" --aspect 16:9 --out hero.png
 genoffice media photo.jpg --ask "What text is in this picture?" --json

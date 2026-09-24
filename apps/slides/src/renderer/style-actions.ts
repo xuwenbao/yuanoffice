@@ -11,6 +11,7 @@ import type {
   EditTableStyleOp,
   GradientFillSpec,
 } from '../shared/ipc'
+import { slidesPlatform } from './platform'
 import type { FontSizeStep } from '@genoffice/pptx-ops/font-size'
 import type { ActionCtx } from './action-context'
 import { FIT_WIDTH } from './app-constants'
@@ -39,7 +40,7 @@ export function onFontFamily(ctx: ActionCtx, family: string): void {
   }
   if (!ctx.selectedIds.length) return
   const groupId = ctx.groupIdOf(ctx.selectedIds[0]!)
-  void window.slidesApi
+  void slidesPlatform().api
     .setElementFont({
       slideIndex: ctx.current,
       sourceIds: ctx.selectedIds,
@@ -56,7 +57,7 @@ export function onFontSize(ctx: ActionCtx, pt: number): void {
   }
   if (!ctx.selectedIds.length) return
   const groupId = ctx.groupIdOf(ctx.selectedIds[0]!)
-  void window.slidesApi
+  void slidesPlatform().api
     .setElementFont({
       slideIndex: ctx.current,
       sourceIds: ctx.selectedIds,
@@ -74,7 +75,7 @@ export function onFontSizeStep(ctx: ActionCtx, step: FontSizeStep): void {
   }
   if (!ctx.selectedIds.length) return
   const groupId = ctx.groupIdOf(ctx.selectedIds[0]!)
-  void window.slidesApi
+  void slidesPlatform().api
     .setElementFont({
       slideIndex: ctx.current,
       sourceIds: ctx.selectedIds,
@@ -100,7 +101,7 @@ export function onAlign(ctx: ActionCtx, align: 'left' | 'center' | 'right' | 'ju
   }
   if (!ctx.selectedIds.length) return
   const groupId = ctx.groupIdOf(ctx.selectedIds[0]!)
-  void window.slidesApi
+  void slidesPlatform().api
     .setElementParagraphFormat({
       slideIndex: ctx.current,
       sourceIds: ctx.selectedIds,
@@ -128,7 +129,7 @@ export function onTextToggle(
     if (!runs.length || runs.some((r) => !r[kind])) allOn = false
   }
   const groupId = ctx.groupIdOf(ctx.selectedIds[0]!)
-  void window.slidesApi
+  void slidesPlatform().api
     .setElementFont({
       slideIndex: ctx.current,
       sourceIds: ctx.selectedIds,
@@ -142,7 +143,7 @@ export function onTextToggle(
 export function onElementTextColor(ctx: ActionCtx, hex: string): void {
   if (!ctx.selectedIds.length) return
   const groupId = ctx.groupIdOf(ctx.selectedIds[0]!)
-  void window.slidesApi
+  void slidesPlatform().api
     .setElementFont({
       slideIndex: ctx.current,
       sourceIds: ctx.selectedIds,
@@ -224,7 +225,7 @@ export function onParagraphFormat(ctx: ActionCtx, patch: ParagraphFormatPatch): 
     if (cur === patch.bullet) patch = { ...patch, bullet: 'none' }
   }
   const groupId = ctx.groupIdOf(ctx.selectedIds[0]!)
-  void window.slidesApi
+  void slidesPlatform().api
     .setElementParagraphFormat({
       slideIndex: ctx.current,
       sourceIds: ctx.selectedIds,
@@ -240,7 +241,7 @@ export async function onFill(
   fill: string | GradientFillSpec,
 ): Promise<void> {
   const groupId = ctx.groupIdOf(sourceId)
-  const updated = await window.slidesApi.editFill({
+  const updated = await slidesPlatform().api.editFill({
     slideIndex: ctx.current,
     sourceId,
     fill,
@@ -255,7 +256,7 @@ export async function onStroke(
   stroke: EditStrokeOp['stroke'],
 ): Promise<void> {
   const groupId = ctx.groupIdOf(sourceId)
-  const updated = await window.slidesApi.editStroke({
+  const updated = await slidesPlatform().api.editStroke({
     slideIndex: ctx.current,
     sourceId,
     stroke,
@@ -272,7 +273,7 @@ export async function onBackground(
   op: DistributiveOmit<EditBackgroundOp, 'fitWidthPx'>,
 ): Promise<void> {
   if (!ctx.slide) return
-  const r = await window.slidesApi.editBackground({
+  const r = await slidesPlatform().api.editBackground({
     ...op,
     fitWidthPx: FIT_WIDTH,
   } as EditBackgroundOp)
@@ -287,7 +288,7 @@ export async function onBackground(
 // All element ids change (save→reopen); selection/edit state is cleared too.
 export async function applyThemePreset(ctx: ActionCtx, preset: SlideThemePreset): Promise<void> {
   if (!ctx.slide) return
-  const r = await window.slidesApi.applyTheme({
+  const r = await slidesPlatform().api.applyTheme({
     name: preset.name,
     colors: preset.colors,
     ...(preset.majorFont ? { majorFont: preset.majorFont } : {}),
@@ -314,7 +315,7 @@ export async function onEditTableStyle(
 ): Promise<void> {
   if (!ctx.selectedNode || ctx.selectedNode.type !== 'table') return
   const oldId = ctx.selectedNode.sourceId
-  const result = await window.slidesApi.editTableStyle({
+  const result = await slidesPlatform().api.editTableStyle({
     ...op,
     slideIndex: ctx.current,
     sourceId: oldId,
@@ -336,7 +337,7 @@ export async function onEditChart(
   op: Omit<EditChartOp, 'slideIndex' | 'sourceId'>,
 ): Promise<void> {
   if (!ctx.selectedNode || ctx.selectedNode.type !== 'chart') return
-  const result = await window.slidesApi.editChart({
+  const result = await slidesPlatform().api.editChart({
     ...op,
     slideIndex: ctx.current,
     sourceId: ctx.selectedNode.sourceId,
@@ -351,7 +352,7 @@ export async function onEditChart(
 /** Open the chart data edit dialog */
 export async function openChartDataDialog(ctx: ActionCtx): Promise<void> {
   if (!ctx.selectedNode || ctx.selectedNode.type !== 'chart') return
-  const data = await window.slidesApi.getChartData(ctx.current, ctx.selectedNode.sourceId)
+  const data = await slidesPlatform().api.getChartData(ctx.current, ctx.selectedNode.sourceId)
   if (data) {
     ctx.setChartDataDialogInit(data)
     ctx.setChartDataDialogOpen(true)

@@ -7,9 +7,12 @@ import { run, tempDir } from './helpers'
 // hasGskAuth reads process.env, not the command context: isolate the login state per test
 const saved: Record<string, string | undefined> = {}
 beforeEach(() => {
-  for (const k of ['GENOFFICE_AUTH_DIR', 'AI_SEARCH_DISABLE_GSK']) saved[k] = process.env[k]
+  for (const k of ['GENOFFICE_AUTH_DIR', 'AI_SEARCH_DISABLE_GSK', 'GENOFFICE_ENABLE_CLOUD']) {
+    saved[k] = process.env[k]
+  }
   process.env.GENOFFICE_AUTH_DIR = join(tempDir(), 'no-auth')
   process.env.AI_SEARCH_DISABLE_GSK = '1'
+  process.env.GENOFFICE_ENABLE_CLOUD = '1'
 })
 afterEach(() => {
   vi.restoreAllMocks()
@@ -27,6 +30,14 @@ function settingsFile(dir: string, settings: Record<string, unknown>): string {
 }
 
 describe('genoffice capabilities', () => {
+  it('reports cloud features disabled unless the build opts in', async () => {
+    const off = await run(['capabilities', '--json'], {
+      env: { ...process.env, GENOFFICE_ENABLE_CLOUD: '' },
+    })
+    expect(off.code).toBe(0)
+    expect(off.json().detail.search).toMatchObject({ available: false, reason: 'disabled' })
+  })
+
   it('reports nothing configured when signed out with default settings', async () => {
     const dir = tempDir()
     const r = await run(['capabilities', '--json'], {

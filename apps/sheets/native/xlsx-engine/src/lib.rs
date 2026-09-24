@@ -121,7 +121,7 @@ impl WorkbookSessions {
         locale: &str,
         short_date_format: Option<&str>,
     ) -> Result<WorkbookMetadata, SidecarError> {
-        let canonical_path = path.canonicalize()?;
+        let canonical_path = canonical_workbook_path(path)?;
         let file = File::open(&canonical_path)?;
         let mut archive = ZipArchive::new(file)?;
         archive::validate_entries(&mut archive)?;
@@ -476,6 +476,10 @@ impl WorkbookSession {
         if runtime.handle.is_some() {
             return Ok(());
         }
+        #[cfg(target_arch = "wasm32")]
+        if runtime.inline_done {
+            return Ok(());
+        }
         let path = self.path.clone();
         let worksheet_path = runtime.worksheet_path.clone();
         let cache_directory = self.cache_directory.clone();
@@ -493,32 +497,62 @@ impl WorkbookSession {
                 .collect(),
         );
         let cancelled = Arc::clone(&self.cancelled);
-        let handle = thread::Builder::new()
-            .name(format!("xlsx-index-{sheet_index}"))
-            .spawn(move || {
-                let result = index_worksheet(
-                    &path,
-                    &worksheet_path,
-                    sheet_index,
-                    &cache_directory,
-                    &shared_strings,
-                    &styled_xfs,
-                    &color_context,
-                    &rich_image_cells,
-                    &state,
-                    &cancelled,
-                );
-                let (lock, condition) = &*state;
-                if let Ok(mut index) = lock.lock() {
-                    match result {
-                        Ok(()) => index.complete = true,
-                        Err(error) => index.error = Some(error.to_string()),
-                    }
-                    condition.notify_all();
+        // wasm32-wasip1 has no threads. Index the sheet on the caller instead
+        // of spawning; canonicalize is also unavailable there.
+        #[cfg(target_arch = "wasm32")]
+        {
+            let result = index_worksheet(
+                &path,
+                &worksheet_path,
+                sheet_index,
+                &cache_directory,
+                &shared_strings,
+                &styled_xfs,
+                &color_context,
+                &rich_image_cells,
+                &state,
+                &cancelled,
+            );
+            let (lock, condition) = &*state;
+            if let Ok(mut index) = lock.lock() {
+                match result {
+                    Ok(()) => index.complete = true,
+                    Err(error) => index.error = Some(error.to_string()),
                 }
-            })?;
-        runtime.handle = Some(handle);
-        Ok(())
+                condition.notify_all();
+            }
+            runtime.inline_done = true;
+            return Ok(());
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let handle = thread::Builder::new()
+                .name(format!("xlsx-index-{sheet_index}"))
+                .spawn(move || {
+                    let result = index_worksheet(
+                        &path,
+                        &worksheet_path,
+                        sheet_index,
+                        &cache_directory,
+                        &shared_strings,
+                        &styled_xfs,
+                        &color_context,
+                        &rich_image_cells,
+                        &state,
+                        &cancelled,
+                    );
+                    let (lock, condition) = &*state;
+                    if let Ok(mut index) = lock.lock() {
+                        match result {
+                            Ok(()) => index.complete = true,
+                            Err(error) => index.error = Some(error.to_string()),
+                        }
+                        condition.notify_all();
+                    }
+                })?;
+            runtime.handle = Some(handle);
+            Ok(())
+        }
     }
 
     fn read_range(
@@ -714,6 +748,9 @@ struct SheetRuntime {
     worksheet_path: String,
     state: Arc<(Mutex<SheetIndex>, Condvar)>,
     handle: Option<JoinHandle<()>>,
+    /// Set when the wasm build indexed the sheet inline. Native builds leave it false.
+    #[cfg(target_arch = "wasm32")]
+    inline_done: bool,
 }
 
 impl SheetRuntime {
@@ -722,9 +759,29 @@ impl SheetRuntime {
             worksheet_path,
             state: Arc::new((Mutex::new(SheetIndex::default()), Condvar::new())),
             handle: None,
+            #[cfg(target_arch = "wasm32")]
+            inline_done: false,
         }
     }
 }
+
+/// Desktop opens use the real path. wasm32-wasip1 aborts in canonicalize, so
+/// the reactor keeps the path the caller already placed inside the preopen.
+fn canonical_workbook_path(path: &Path) -> Result<PathBuf, SidecarError> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        Ok(path.to_path_buf())
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        Ok(path.canonicalize()?)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+mod protocol;
+#[cfg(target_arch = "wasm32")]
+mod wasm_api;
 
 #[derive(Default)]
 struct SheetIndex {

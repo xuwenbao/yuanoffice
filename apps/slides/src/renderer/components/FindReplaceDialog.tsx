@@ -14,6 +14,7 @@ import type {
   ShapeRenderNode,
   TableRenderNode,
 } from '@genoffice/pptx-render'
+import { slidesPlatform } from '../platform'
 
 export interface FindMatch {
   slideIndex: number
@@ -115,7 +116,7 @@ export function FindReplaceDialog({
       findNext()
       return
     }
-    const r = await window.slidesApi.findReplace({
+    const r = await slidesPlatform().api.findReplace({
       find: query,
       replace: replaceText,
       matchCase,

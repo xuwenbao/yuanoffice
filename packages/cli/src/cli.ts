@@ -11,7 +11,9 @@ import { guideCommand } from './commands/guide'
 import { imageCommand } from './commands/image'
 import { mediaCommand } from './commands/media'
 import { searchCommand } from './commands/search'
+import { editorCommand } from './commands/editor'
 import { selectionCommand } from './commands/selection'
+import { serveCommand } from './commands/serve'
 import { infoCommand } from './commands/info'
 import { installCommand } from './commands/install'
 import { mcpCommand } from './commands/mcp'
@@ -48,8 +50,13 @@ function devVersion(): string {
   }
 }
 
-export function defaultRegistry(): CommandRegistry {
-  return new CommandRegistry()
+/** Cloud commands call a model. This distribution leaves them unregistered unless opted in. */
+export function cloudCommandsEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.GENOFFICE_ENABLE_CLOUD === '1'
+}
+
+export function defaultRegistry(env: NodeJS.ProcessEnv = process.env): CommandRegistry {
+  const registry = new CommandRegistry()
     .register(infoCommand)
     .register(convertCommand)
     .register(createCommand)
@@ -58,15 +65,18 @@ export function defaultRegistry(): CommandRegistry {
     .register(docsCommand)
     .register(renderCommand)
     .register(guideCommand)
-    .register(searchCommand)
-    .register(imageCommand)
-    .register(mediaCommand)
     .register(openCommand)
     .register(selectionCommand)
+    .register(editorCommand)
+    .register(serveCommand)
     .register(capabilitiesCommand)
     .register(installCommand)
     .register(mcpCommand)
     .register(skillCommand)
+  if (cloudCommandsEnabled(env)) {
+    registry.register(searchCommand).register(imageCommand).register(mediaCommand)
+  }
+  return registry
 }
 
 export interface RunIo {
@@ -83,7 +93,8 @@ export interface RunOptions {
 
 /** Runs one invocation; returns the exit code instead of exiting so tests and hosts can embed it. */
 export async function runCli(argv: readonly string[], opts: RunOptions = {}): Promise<ExitCode> {
-  const registry = opts.registry ?? defaultRegistry()
+  const env = opts.env ?? process.env
+  const registry = opts.registry ?? defaultRegistry(env)
   const io = opts.io ?? {
     stdout: (t) => process.stdout.write(t + '\n'),
     stderr: (t) => process.stderr.write(t + '\n'),
@@ -152,7 +163,7 @@ export async function runCli(argv: readonly string[], opts: RunOptions = {}): Pr
   const warnings: Warning[] = []
   const ctx: CommandContext = {
     cwd: opts.cwd ?? process.cwd(),
-    env: opts.env ?? process.env,
+    env,
     log: (m) => io.stderr(m),
     warn: (w) => warnings.push(w),
   }

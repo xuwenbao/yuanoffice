@@ -18,6 +18,7 @@ import type { WorkbookFile } from '../shared/desktop-api'
 import { t } from './i18n/locale'
 import type { LazyWorkbookState, UniverRuntime } from './univer-state'
 import { characterWidthToPixels, toUniverStyle, workbookStructureLocked } from './univer-sync'
+import { sheetsPlatform } from './platform'
 
 /// Stay under the IPC schema's MAX_RANGE_CELLS (100k) with headroom.
 const READ_CHUNK_CELLS = 90_000
@@ -87,7 +88,7 @@ async function readSourceSheet(
     // poll until the chunk's rows are covered or the source stops indexing,
     // otherwise unindexed rows would be silently dropped.
     const deadline = Date.now() + 120_000
-    let result = await window.desktopApi.readWorkbookRange({
+    let result = await sheetsPlatform().api.readWorkbookRange({
       sessionId: file.sessionId,
       sheetId: sheet.id,
       range: { startRow, endRow, startColumn: 0, endColumn: columns - 1 },
@@ -98,7 +99,7 @@ async function readSourceSheet(
     ) {
       if (Date.now() > deadline) throw new Error(t('appMergeWorkbooksFailed'))
       await new Promise((resolve) => setTimeout(resolve, 400))
-      result = await window.desktopApi.readWorkbookRange({
+      result = await sheetsPlatform().api.readWorkbookRange({
         sessionId: file.sessionId,
         sheetId: sheet.id,
         range: { startRow, endRow, startColumn: 0, endColumn: columns - 1 },
@@ -289,7 +290,7 @@ export async function mergeSourcesIntoCurrent(
     return { importedSheets, files: sources.length, sheetNames }
   } finally {
     for (const file of sources) {
-      void window.desktopApi.closeWorkbook(file.sessionId).catch(() => {})
+      void sheetsPlatform().api.closeWorkbook(file.sessionId).catch(() => {})
     }
   }
 }
@@ -303,7 +304,7 @@ export async function mergeWorkbooksIntoCurrent(deps: MergeWorkbooksDeps): Promi
   }
   setMessage(t('appMergeWorkbooksPicking'))
   try {
-    const sources = await window.desktopApi.selectWorkbooksForMerge()
+    const sources = await sheetsPlatform().api.selectWorkbooksForMerge()
     if (!sources || sources.length === 0) {
       setMessage(t('appOpenCanceled'))
       return
@@ -322,7 +323,7 @@ export async function mergeAttachedWorkbooks(
   if (workbookStructureLocked(deps.lazyWorkbookRef.current)) {
     throw new Error(t('appMergeWorkbooksLocked'))
   }
-  const sources = await window.desktopApi.openWorkbooksForMerge(paths)
+  const sources = await sheetsPlatform().api.openWorkbooksForMerge(paths)
   if (!sources || sources.length === 0) throw new Error(t('appMergeWorkbooksFailed'))
   return mergeSourcesIntoCurrent(deps, sources)
 }

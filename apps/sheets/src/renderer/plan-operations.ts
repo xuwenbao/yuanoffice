@@ -51,6 +51,7 @@ import {
 } from './univer-sync'
 import { CLOSURE_MAX_CELLS, type LazyWorkbookState, type UniverRuntime } from './univer-state'
 import { convertibleType } from './WorkbookVisuals'
+import { sheetsPlatform } from './platform'
 
 /** App-scope state the plan builders need, threaded explicitly. */
 export interface PlanContext {
@@ -1348,7 +1349,7 @@ export async function structuralDeleteFormulaError(
     if (fileSheetIds.has(sheetId)) {
       let result
       try {
-        result = await window.desktopApi.readWorkbookFormulas({
+        result = await sheetsPlatform().api.readWorkbookFormulas({
           sessionId: state.file.sessionId,
           sheetId,
         })

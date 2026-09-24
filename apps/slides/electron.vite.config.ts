@@ -69,7 +69,13 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin({ exclude: ['@genoffice/electron-utils'] })],
   },
   renderer: {
-    resolve: { alias: workspaceAlias },
+    resolve: {
+      alias: {
+        ...workspaceAlias,
+        '@host': resolve(here, 'src/renderer/host-electron.ts'),
+        '@genoffice/platform': resolve(here, '../../packages/platform/src/index.ts'),
+      },
+    },
     plugins: [react()],
     server: {
       port: Number(process.env.SLIDES_DEV_PORT) || 5175,

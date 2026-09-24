@@ -20,7 +20,9 @@
       "@genoffice/pptx-engine": ["../../packages/pptx-engine/src/index.ts"],
       "@genoffice/cli/install": ["../../packages/cli/src/install.ts"],
       "@genoffice/cli/agent-skills": ["../../packages/cli/src/agent-skills.ts"],
-      "@genoffice/cli/control-protocol": ["../../packages/cli/src/control-protocol.ts"]
+      "@genoffice/cli/control-protocol": ["../../packages/cli/src/control-protocol.ts"],
+      "@genoffice/platform": ["../../packages/platform/src/index.ts"],
+      "@genoffice/platform-web": ["../../packages/platform-web/src/index.ts"]
     }
   },
   "include": [

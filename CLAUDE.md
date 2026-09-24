@@ -2,6 +2,11 @@
 
 Guidance for AI agents and human contributors working in this repo.
 
+The browser host, platform ports, local control service, and live editor
+tools are specified in `docs/web-architecture.md`. Read that document before
+changing any of them, and update it in the same change when a protocol,
+save rule, tool result, or security boundary moves.
+
 ## Theming rules (mandatory)
 
 The suite supports light / dark / system UI themes. The switching mechanism is a

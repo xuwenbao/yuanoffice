@@ -1,3 +1,4 @@
+import { slidesPlatform } from './platform'
 /**
  * @font-face CSS for the PDF print window. It is a separate page: the bundled
  * substitutes (styles.css) and the Office-private FontFaces (doc-fonts.ts) the
@@ -76,7 +77,7 @@ async function bundledFaces(names: Set<string>): Promise<string[]> {
 async function privateFaces(names: Set<string>): Promise<string[]> {
   let faces: Array<{ id: string; family: string; bold: boolean; italic: boolean }>
   try {
-    faces = await window.slidesApi.privateFontFaces()
+    faces = await slidesPlatform().api.privateFontFaces()
   } catch {
     return []
   }
@@ -86,7 +87,7 @@ async function privateFaces(names: Set<string>): Promise<string[]> {
       .filter((f) => names.has(f.family.normalize('NFKC').toLowerCase()))
       .map(async (f) => {
         try {
-          const data = await window.slidesApi.privateFontData(f.id)
+          const data = await slidesPlatform().api.privateFontData(f.id)
           if (!data) return null
           return faceRule(
             f.family,

@@ -1,3 +1,4 @@
+import { docsPlatform } from './platform'
 import type { Editor } from '@tiptap/react'
 import { BLANK_BULLET_NUM_ID, BLANK_ORDERED_NUM_ID } from '@genoffice/docx-engine'
 import type { McpCommandMessage, McpEditorCommand } from '../shared/ipc'
@@ -158,9 +159,12 @@ async function runCommand(
 
     case 'save_document': {
       const input = (payload ?? {}) as { path?: string; overwrite?: boolean }
-      if (typeof input.path !== 'string' || !input.path) {
+      const ownPath = ctx.doc?.filePath ?? undefined
+      const path = typeof input.path === 'string' && input.path ? input.path : ownPath
+      if (!path) {
         throw new Error('save_document requires an absolute "path"')
       }
+      input.path = path
       let reason = ''
       const ok = await save(ctx, false, true, undefined, {
         path: input.path,
@@ -212,18 +216,19 @@ async function announceWhenLoaded(
 
 /** Subscribe the live editor to MCP commands. Returns the unsubscribe function. */
 export function installMcpBridge(deps: McpBridgeDeps): () => void {
-  const desktop = window.desktop
-  if (!desktop?.onMcpCommand || !desktop.reportMcpResult) return () => {}
+  const control = docsPlatform().agentControl
+  if (!control) return () => {}
   let cancelled = false
   let queue: Promise<void> = Promise.resolve()
-  const unsubscribe = desktop.onMcpCommand((message: McpCommandMessage) => {
+  const unsubscribe = control.onCommand((command) => {
+    const message = command as McpCommandMessage
     if (!message || typeof message.requestId !== 'string') return
     queue = queue.then(async () => {
       try {
         const result = await runCommand(deps, message.command, message.payload)
-        desktop.reportMcpResult({ requestId: message.requestId, ok: true, result })
+        control.reportResult({ requestId: message.requestId, ok: true, result })
       } catch (error) {
-        desktop.reportMcpResult({
+        control.reportResult({
           requestId: message.requestId,
           ok: false,
           error: error instanceof Error ? error.message : String(error),
@@ -231,10 +236,19 @@ export function installMcpBridge(deps: McpBridgeDeps): () => void {
       }
     })
   })
-  // Let the shell know this tab can accept commands (device for targeted routing).
   void announceWhenLoaded(
     deps,
-    () => desktop.signalMcpReady?.(),
+    () => {
+      const ctx = deps.getCtx()
+      control.publish({
+        editorId: ctx.doc?.filePath ?? 'unsaved',
+        path: ctx.doc?.filePath ?? '',
+        family: 'docs',
+        title: ctx.doc?.fileName ?? 'Untitled',
+        revision: 0,
+        dirty: false,
+      })
+    },
     () => cancelled,
   )
   return () => {

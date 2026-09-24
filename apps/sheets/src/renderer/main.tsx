@@ -17,6 +17,7 @@ import { installCanvasFontFallback, registerCellFontAliases } from './cell-font-
 import { LocaleProvider, setModuleLang } from './i18n/locale'
 import type { UiTheme } from '../shared/desktop-api'
 import './styles.css'
+import { sheetsPlatform } from './platform'
 
 if (import.meta.hot) {
   import.meta.hot.on('vite:beforeUpdate', ({ updates }) => {
@@ -60,8 +61,8 @@ async function bootstrap(): Promise<void> {
     // per-promise catch: standalone runs have no app:get-theme handler, and
     // that rejection must not drop a resolved language
     ;[lang, theme] = await Promise.all([
-      window.desktopApi.getLanguage().catch(() => 'zh' as const),
-      window.desktopApi.getTheme().catch(() => 'system' as const),
+      sheetsPlatform().api.getLanguage().catch(() => 'zh' as const),
+      sheetsPlatform().api.getTheme().catch(() => 'system' as const),
     ])
   } catch {
     /* dev renderer without the preload bridge */
@@ -70,12 +71,12 @@ async function bootstrap(): Promise<void> {
   document.documentElement.lang = htmlLang(lang)
   applyTheme(theme)
   await loadCellFonts()
-  window.desktopApi?.onThemeChanged(applyTheme)
-  void window.desktopApi
+  sheetsPlatform().api?.onThemeChanged(applyTheme)
+  void sheetsPlatform().api
     ?.getAiPanelPrefs?.()
     .then(applyAiPanelPrefs)
     .catch(() => {})
-  window.desktopApi?.onAiPanelPrefsChanged?.(applyAiPanelPrefs)
+  sheetsPlatform().api?.onAiPanelPrefsChanged?.(applyAiPanelPrefs)
   ReactDOM.createRoot(root!).render(
     <LocaleProvider initial={lang}>
       <App />

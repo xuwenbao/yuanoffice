@@ -13,6 +13,7 @@ import { armColorInput } from './color-input'
 import { ContextMenu, type CtxItem } from './components/ContextMenu'
 import type { EditParagraph, MasterPartItem } from '../shared/ipc'
 import { t } from './i18n/locale'
+import { slidesPlatform } from './platform'
 
 interface Props {
   initialItems: MasterPartItem[]
@@ -77,7 +78,7 @@ export function MasterView({ initialItems, onClose }: Props) {
       if (!it) return
       setEditing(null)
       setSelectedIds([])
-      const rs = await window.slidesApi.masterOpen(it.partPath)
+      const rs = await slidesPlatform().api.masterOpen(it.partPath)
       if (rs) {
         setItems((prev) => prev.map((x, k) => (k === i ? { ...x, slide: rs } : x)))
         setSel(i)
@@ -93,7 +94,7 @@ export function MasterView({ initialItems, onClose }: Props) {
       preview?: boolean,
     ) => {
       applyCurrent(
-        await window.slidesApi.masterEditTransform({
+        await slidesPlatform().api.masterEditTransform({
           sourceId,
           xPx: box.x,
           yPx: box.y,
@@ -112,7 +113,7 @@ export function MasterView({ initialItems, onClose }: Props) {
     async (paragraphs: EditParagraph[]) => {
       if (!editing) return
       applyCurrent(
-        await window.slidesApi.masterEditText({ sourceId: editing.sourceId, paragraphs }),
+        await slidesPlatform().api.masterEditText({ sourceId: editing.sourceId, paragraphs }),
       )
       setEditing(null)
       setSelectedIds([editing.sourceId])
@@ -122,7 +123,7 @@ export function MasterView({ initialItems, onClose }: Props) {
 
   const deleteSelected = useCallback(async () => {
     for (const id of selectedIds) {
-      applyCurrent(await window.slidesApi.masterDeleteElement({ sourceId: id }))
+      applyCurrent(await slidesPlatform().api.masterDeleteElement({ sourceId: id }))
     }
     setSelectedIds([])
   }, [selectedIds, applyCurrent])
@@ -142,8 +143,8 @@ export function MasterView({ initialItems, onClose }: Props) {
       colorTargetRef.current = null
       applyCurrent(
         target.kind === 'fill'
-          ? await window.slidesApi.masterEditFill({ sourceId: target.sourceId, fill: hex })
-          : await window.slidesApi.masterEditStroke({
+          ? await slidesPlatform().api.masterEditFill({ sourceId: target.sourceId, fill: hex })
+          : await slidesPlatform().api.masterEditStroke({
               sourceId: target.sourceId,
               stroke: { color: hex, widthPt: 1 },
             }),
@@ -191,7 +192,7 @@ export function MasterView({ initialItems, onClose }: Props) {
             {
               label: t('appMasterFillNone'),
               onClick: () =>
-                void window.slidesApi
+                void slidesPlatform().api
                   .masterEditFill({ sourceId: id, fill: 'none' })
                   .then(applyCurrent),
             },
@@ -199,7 +200,7 @@ export function MasterView({ initialItems, onClose }: Props) {
             {
               label: t('appMasterStrokeNone'),
               onClick: () =>
-                void window.slidesApi
+                void slidesPlatform().api
                   .masterEditStroke({ sourceId: id, stroke: null })
                   .then(applyCurrent),
             },

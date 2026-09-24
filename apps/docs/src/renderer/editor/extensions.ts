@@ -1,3 +1,4 @@
+import { docsPlatform } from '../platform'
 import { ScriptFonts } from './script-fonts'
 import { Editor, Extension, Node } from '@tiptap/core'
 import { StreamingTailGuardExtension } from './streaming-tail-guard'
@@ -3381,7 +3382,7 @@ export const ImageCopyExtension = Extension.create({
           return false
         }
       }
-      const write = window.desktop?.copyImageToClipboard?.(dataUrl, imageMetaJson(node.attrs))
+      const write = docsPlatform().api?.copyImageToClipboard?.(dataUrl, imageMetaJson(node.attrs))
       // no bridge: keep the default HTML-only copy instead of an empty clipboard
       if (!write) return false
       event.preventDefault()

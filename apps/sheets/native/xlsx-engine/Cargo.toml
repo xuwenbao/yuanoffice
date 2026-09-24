@@ -5,6 +5,10 @@ edition = "2024"
 license = "Apache-2.0"
 publish = false
 
+[lib]
+# rlib keeps the desktop sidecar link. cdylib is the wasm32-wasip1 reactor.
+crate-type = ["rlib", "cdylib"]
+
 [dependencies]
 base64 = "0.22.1"
 calamine = "0.36.0"

@@ -41,6 +41,7 @@ import {
   valueAxisLayout,
 } from './chart-text-scale'
 import type { ChartAxisText, ChartTextBox } from './chart-text-scale'
+import { sheetsPlatform } from './platform'
 
 type UniverRuntime = ReturnType<typeof createUniver>
 type ActiveWorkbook = NonNullable<ReturnType<UniverRuntime['univerAPI']['getActiveWorkbook']>>
@@ -1600,7 +1601,7 @@ function useWorkbookMediaUrl(
   useEffect(() => {
     if (sessionId === undefined) return
     let isCurrent = true
-    void window.desktopApi
+    void sheetsPlatform().api
       .readWorkbookMedia({ sessionId, visualId })
       .then(async (media) => {
         const next = isMetafileMime(media.mediaType)

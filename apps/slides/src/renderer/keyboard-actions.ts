@@ -19,6 +19,7 @@ import { flushActiveEdit } from './file-actions'
 import { shouldRouteHistoryToDeck } from './undo-routing'
 import { rangeSelection } from '../shared/slide-selection'
 import { nextPreset, prevPreset } from './zoom-steps'
+import { slidesPlatform } from './platform'
 
 /** Whether focus is in a text input (input/textarea/contentEditable) — these cases use native undo/delete */
 function inTextField(): boolean {
@@ -492,7 +493,7 @@ async function commitTransforms(
     )
     return
   }
-  const updated = await window.slidesApi.editTransformMulti({
+  const updated = await slidesPlatform().api.editTransformMulti({
     slideIndex: ctx.current,
     fitWidthPx: FIT_WIDTH,
     items,

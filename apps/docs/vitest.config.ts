@@ -21,6 +21,9 @@ export default defineConfig({
       '@genoffice/ai-provider': local('../../packages/ai-provider/src/index.ts'),
       '@genoffice/i18n': local('../../packages/i18n/src/index.ts'),
       '@genoffice/ui': local('../../packages/ui/src/index.ts'),
+      '@genoffice/platform': local('../../packages/platform/src/index.ts'),
+      '@host': local('./src/renderer/host-electron.ts'),
+      'docs-electron-platform': local('./src/renderer/platform-electron.ts'),
     },
   },
   test: {

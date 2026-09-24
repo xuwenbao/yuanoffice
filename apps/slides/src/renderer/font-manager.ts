@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { slidesPlatform } from './platform'
 
 export interface CatalogEntry {
   family: string
@@ -27,7 +28,7 @@ export function useFontCatalog(): {
   const [failed, setFailed] = useState<ReadonlySet<string>>(new Set())
 
   const load = useCallback(() => {
-    void window.slidesApi
+    void slidesPlatform().api
       .fontCatalog?.()
       .then((c) => {
         cached = c
@@ -45,7 +46,7 @@ export function useFontCatalog(): {
         return n
       })
       try {
-        const r = await window.slidesApi.fontDownload?.(family)
+        const r = await slidesPlatform().api.fontDownload?.(family)
         if (!r?.ok) throw new Error(r?.error)
         return true
       } catch {
@@ -65,7 +66,7 @@ export function useFontCatalog(): {
 
   const installLocal = useCallback(async (): Promise<string[]> => {
     try {
-      const r = await window.slidesApi.fontInstallLocal?.()
+      const r = await slidesPlatform().api.fontInstallLocal?.()
       return r?.families ?? []
     } catch {
       return []
@@ -74,7 +75,7 @@ export function useFontCatalog(): {
     }
   }, [load])
 
-  useEffect(() => window.slidesApi.onFontsChanged?.(load), [load])
+  useEffect(() => slidesPlatform().api.onFontsChanged?.(load), [load])
 
   return { catalog, busy, failed, load, download, installLocal }
 }

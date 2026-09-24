@@ -1,3 +1,4 @@
+import { docsPlatform } from './platform'
 import { useEffect, useState } from 'react'
 
 /**
@@ -18,7 +19,7 @@ export function useUiThemeIsDark(): boolean {
     const update = (): void => setDark(uiThemeIsDark())
     // main.tsx's listener (registered at bootstrap) updates data-theme first,
     // so reading the attribute in ours is safe
-    const off = window.desktop?.onThemeChanged?.(update)
+    const off = docsPlatform().api?.onThemeChanged?.(update)
     const mq = window.matchMedia?.('(prefers-color-scheme: dark)')
     mq?.addEventListener('change', update)
     return () => {

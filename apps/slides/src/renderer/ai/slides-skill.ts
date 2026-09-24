@@ -6,6 +6,7 @@ import type {
   RenderSlide,
   ShapeRenderNode,
 } from '@genoffice/pptx-render'
+import { slidesPlatform } from '../platform'
 import type { AgentToolCall, AgentToolDef } from '../../shared/ipc'
 import { OP_GROUPS, opGuide, opGuideCatalog, opSignatureIndex } from '@genoffice/pptx-ops/op-docs'
 import { auditSlideLayout, formatAudit } from '@genoffice/pipelines/slides/layout-audit'
@@ -1397,7 +1398,7 @@ async function executeTool(
       // ── Dispatch: the whole script is ONE transaction — the collected primitives go
       //   to the main process in a single IPC and apply atomically through the op
       //   executor (any failure rolls the deck back there and returns a guided error).
-      const applied = await window.slidesApi.applyEditScript({
+      const applied = await slidesPlatform().api.applyEditScript({
         slideIndex: idx,
         fitWidthPx: access.fitWidthPx,
         boxes: r.ops,
@@ -1431,7 +1432,7 @@ async function executeTool(
     case 'web_search': {
       const query = String(call.input.query ?? '').trim()
       if (!query) return fail(t('aiFailWebSearch'), 'query must not be empty')
-      const r = await window.slidesApi.webSearch(query, Number(call.input.maxResults) || 6)
+      const r = await slidesPlatform().api.webSearch(query, Number(call.input.maxResults) || 6)
       // a backend failure must not read as "no results" — the model would fabricate conclusions
       if (r.method === 'error') {
         return fail(
@@ -1465,7 +1466,7 @@ async function executeTool(
     case 'image_search': {
       const query = String(call.input.query ?? '').trim()
       if (!query) return fail(t('aiFailImageSearch'), 'query must not be empty')
-      const r = await window.slidesApi.imageSearch(query, Number(call.input.maxResults) || 8)
+      const r = await slidesPlatform().api.imageSearch(query, Number(call.input.maxResults) || 8)
       // a backend failure must not read as an empty gallery — the model would fabricate image choices
       if (r.method === 'error') {
         return fail(
@@ -1497,7 +1498,7 @@ async function executeTool(
       const refs = Array.isArray(call.input.referenceImageUrls)
         ? (call.input.referenceImageUrls as unknown[]).map(String).filter(Boolean)
         : undefined
-      const r = await window.slidesApi.generateImage({
+      const r = await slidesPlatform().api.generateImage({
         prompt,
         model: call.input.model ? String(call.input.model) : undefined,
         referenceImageUrls: refs,
@@ -1528,7 +1529,7 @@ async function executeTool(
       const requirements = String(call.input.requirements ?? '').trim()
       if (!mediaUrls.length) return fail(t('aiFailMedia'), 'mediaUrls must not be empty')
       if (!requirements) return fail(t('aiFailMedia'), 'requirements must not be empty')
-      const r = await window.slidesApi.analyzeMedia({ mediaUrls, requirements })
+      const r = await slidesPlatform().api.analyzeMedia({ mediaUrls, requirements })
       if (!r.text) return fail(t('aiFailMedia'), r.error ?? 'Analysis failed')
       // Analysis text can be very long; truncate to protect context (first 6000 chars are enough to generate deck content)
       const MAX_LEN = 6000
@@ -1558,7 +1559,7 @@ async function executeTool(
         if (!/^(https?|file):\/\//.test(url)) return fail(t('aiFailInsertImage'), 'Invalid url')
         payload = { url }
       }
-      const r = await window.slidesApi.insertImageUrl({
+      const r = await slidesPlatform().api.insertImageUrl({
         slideIndex: idx,
         ...payload,
         xPx: Number(call.input.x),
@@ -1610,7 +1611,7 @@ async function executeTool(
         if (!/^(https?|file):\/\//.test(url)) return fail(t(failKey), 'Invalid url')
         payload = { url }
       }
-      const updated = await window.slidesApi.replacePictureUrl({
+      const updated = await slidesPlatform().api.replacePictureUrl({
         slideIndex: idx,
         sourceId,
         ...payload,
@@ -2423,7 +2424,7 @@ async function executeTool(
       if (typeof call.input.dataLabels === 'boolean') op.dataLabels = call.input.dataLabels
       if (typeof call.input.gridlines === 'boolean') op.gridlines = call.input.gridlines
       if (call.input.switchRowCol === true) op.switchRowCol = true
-      const updated = await window.slidesApi.editChart(op)
+      const updated = await slidesPlatform().api.editChart(op)
       if (!updated)
         return fail(
           t('aiFailChartEdit'),
@@ -2444,7 +2445,7 @@ async function executeTool(
         return fail(t('aiFailApplyOps'), 'ops must be a non-empty array')
       const pre = preflightOps(opsIn, slides, state)
       if (!('ops' in pre)) return pre
-      const r = await window.slidesApi.applyTxn?.({
+      const r = await slidesPlatform().api.applyTxn?.({
         ops: pre.ops,
         ...(call.input.dry_run === true ? { dryRun: true } : {}),
         ...(call.input.isolation === 'per_op' ? { isolation: 'per_op' as const } : {}),

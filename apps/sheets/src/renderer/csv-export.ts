@@ -8,6 +8,7 @@ import { formulaViewSheets } from './formula-view'
 import { t } from './i18n/locale'
 import { showToast } from './toast-bus'
 import type { LazyWorkbookState, UniverRuntime } from './univer-state'
+import { sheetsPlatform } from './platform'
 
 /// Rows fetched per getDisplayValues call, bounding the facade's allocation.
 const EXPORT_ROW_BLOCK = 4096
@@ -144,7 +145,7 @@ export async function handleExportCsv(ctx: CsvExportContext, targetPath?: string
       return
     }
     const baseName = (state?.file.name ?? 'Book1').replace(/\.[^.]+$/, '')
-    const result = await window.desktopApi.exportCsv({
+    const result = await sheetsPlatform().api.exportCsv({
       fileName: `${baseName}.csv`,
       content,
       hasFormulas: sheetHasFormulas(sheet),

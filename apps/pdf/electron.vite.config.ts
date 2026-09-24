@@ -1,11 +1,13 @@
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import { normalizePath } from 'vite'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
 
 // Non-embedded CMaps/standard fonts (e.g. CJK) need pdfjs data dirs, shipped with renderer output
+const pdfRoot = dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
 const pdfjsRoot = dirname(dirname(require.resolve('pdfjs-dist/package.json')))
 // vite-plugin-static-copy globs require POSIX separators; join() breaks on Windows
@@ -40,6 +42,12 @@ export default defineConfig({
         ],
       }),
     ],
+    resolve: {
+      alias: {
+        '@host': join(pdfRoot, 'src/renderer/host-electron.ts'),
+        '@genoffice/platform': join(pdfRoot, '../../packages/platform/src/index.ts'),
+      },
+    },
     server: {
       port: Number(process.env.PDF_DEV_PORT) || 5176,
       strictPort: Boolean(process.env.PDF_DEV_PORT),

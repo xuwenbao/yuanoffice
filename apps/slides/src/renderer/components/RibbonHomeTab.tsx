@@ -50,6 +50,7 @@ import {
   IconSubscript,
   IconSuperscript,
 } from './icons'
+import { slidesPlatform } from '../platform'
 import {
   BIG,
   FONT_FAMILIES,
@@ -202,7 +203,7 @@ export function RibbonHomeTab({ rb }: { rb: RibbonTabCtx }) {
     onParagraphFormat({ startAt: n })
   }
   const pickBulletPicture = async () => {
-    const picked = await window.slidesApi.pickPictureFile()
+    const picked = await slidesPlatform().api.pickPictureFile()
     if (picked) onParagraphFormat({ bullet: 'blip', bulletImage: picked })
   }
   const draftKeys = (commit: () => void) => (e: React.KeyboardEvent<HTMLInputElement>) => {

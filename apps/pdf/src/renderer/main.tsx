@@ -13,6 +13,8 @@ import '@genoffice/ui/ai-panel-prefs.css'
 import '@genoffice/ui/ai-scope-quote.css'
 import './styles.css'
 import { applyAiPanelPrefs, installScreenTips } from '@genoffice/ui'
+import { pdfPlatform } from './platform'
+import { installPdfHost } from '@host'
 
 installScreenTips()
 
@@ -22,18 +24,19 @@ function applyTheme(theme: UiTheme): void {
 }
 
 void (async () => {
+  await installPdfHost()
   const [lang, theme] = await Promise.all([
-    window.pdfApi.getLanguage().catch(() => 'zh' as const),
-    window.pdfApi.getTheme().catch(() => 'system' as const),
+    pdfPlatform().api.getLanguage().catch(() => 'zh' as const),
+    pdfPlatform().api.getTheme().catch(() => 'system' as const),
   ])
   document.documentElement.lang = htmlLang(lang as Lang)
   applyTheme(theme)
-  window.pdfApi.onThemeChanged(applyTheme)
-  void window.pdfApi
+  pdfPlatform().api.onThemeChanged(applyTheme)
+  void pdfPlatform().api
     ?.getAiPanelPrefs?.()
     .then(applyAiPanelPrefs)
     .catch(() => {})
-  window.pdfApi?.onAiPanelPrefsChanged?.(applyAiPanelPrefs)
+  pdfPlatform().api?.onAiPanelPrefsChanged?.(applyAiPanelPrefs)
   createRoot(document.getElementById('root')!).render(
     <LocaleProvider initial={lang}>
       <App />

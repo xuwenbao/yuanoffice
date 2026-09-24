@@ -33,6 +33,12 @@ const TARGET_KIND_BY_TAB: Partial<Record<TabKind, ControlTarget['kind']>> = {
  */
 export function controlHandler(host: ControlHost): (req: ControlRequest) => Promise<ControlReply> {
   return async (req) => {
+    if (req.cmd !== 'open' && req.cmd !== 'selection') {
+      return fail(
+        'unsupported',
+        'editor commands are served by `genoffice serve`, not the desktop shell',
+      )
+    }
     if (!existsSync(req.path)) {
       return fail('file_not_found', `file not found: ${req.path}`)
     }

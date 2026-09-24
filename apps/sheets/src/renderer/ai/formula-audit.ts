@@ -22,6 +22,7 @@ import type {
 } from './tools'
 import type { WorkbookReadContext } from './workbook-readers'
 import { ERROR_VALUE_RE } from './workbook-search'
+import { sheetsPlatform } from '../platform'
 
 const MAX_REFS = 30
 const MAX_SAMPLE_CELLS = 12
@@ -382,7 +383,7 @@ async function collectSheetFormulas(
   if (!meta) return { cells, complete: true }
   let result
   try {
-    result = await window.desktopApi.readWorkbookFormulas({
+    result = await sheetsPlatform().api.readWorkbookFormulas({
       sessionId: state.file.sessionId,
       sheetId: sheet.id,
     })
