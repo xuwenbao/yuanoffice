@@ -24,9 +24,11 @@ export default defineConfig({
         replacement: resolve(root, 'src/renderer/platform-electron.web.ts'),
       },
       // Relative imports of the desktop adapter stay on the real file for CLI
-      // tests and tsc. The web bundle must not ship that module.
+      // tests and tsc. The web bundle must not ship that module. The pattern
+      // matches the whole specifier: Vite replaces only the matched text, and
+      // a suffix match turns "./platform-electron" into a broken "./<abs>" path.
       {
-        find: /(?:^|[/\\])platform-electron(?:\.ts)?$/,
+        find: /^(?:.*[/\\])?platform-electron(?:\.ts)?$/,
         replacement: resolve(root, 'src/renderer/platform-electron.web.ts'),
       },
       {
