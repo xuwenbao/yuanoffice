@@ -582,7 +582,8 @@ export function App(): React.JSX.Element {
   }, [])
   const [recoveryPrompt, setRecoveryPrompt] = useState<RecoveryPromptPayload | null>(null)
   useEffect(
-    () => sheetsPlatform().api?.onRecoveryPrompt?.((prompt) => setRecoveryPrompt(prompt)) ?? undefined,
+    () =>
+      sheetsPlatform().api?.onRecoveryPrompt?.((prompt) => setRecoveryPrompt(prompt)) ?? undefined,
     [],
   )
   /// Streaming-mode filter gate: the filter panel builds
@@ -877,8 +878,8 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     let alive = true
     const refresh = () => {
-      void sheetsPlatform().api
-        ?.aiGskStatus()
+      void sheetsPlatform()
+        .api?.aiGskStatus()
         .then((s) => {
           if (alive) gskLoggedInRef.current = !!s?.loggedIn
         })
@@ -1320,8 +1321,8 @@ export function App(): React.JSX.Element {
           })
           // Signed-out failures get an inline sign-in button; detected via
           // gsk status rather than matching the localized error text
-          void sheetsPlatform().api
-            .aiGskStatus()
+          void sheetsPlatform()
+            .api.aiGskStatus()
             .then((status) => {
               if (status.loggedIn) return
               setChat((previous) => {
@@ -1657,9 +1658,11 @@ export function App(): React.JSX.Element {
     // gives up after 30s, and on slow dev cold starts Univer mounts later than
     // that — the tab would strand as a blank in-memory workbook (no save, no
     // shapes) with the queued file silently never opened.
-    void sheetsPlatform().api?.hasQueuedWorkbook?.().then((queued) => {
-      if (queued) void handleInspectWorkbook()
-    })
+    void sheetsPlatform()
+      .api?.hasQueuedWorkbook?.()
+      .then((queued) => {
+        if (queued) void handleInspectWorkbook()
+      })
     // Univer 0.25.1 also badges text parseable as date/time, phone numbers, and
     // other long numeric identifiers with "Number stored as text". Those values
     // should remain text, so clear the view type before the built-in marker
@@ -3773,7 +3776,9 @@ export function App(): React.JSX.Element {
     const previous = lazyWorkbookRef.current
     if (previous) {
       clearLazyState(previous)
-      void sheetsPlatform().api.closeWorkbook(previous.file.sessionId).catch(() => undefined)
+      void sheetsPlatform()
+        .api.closeWorkbook(previous.file.sessionId)
+        .catch(() => undefined)
     }
     if (demoVisualInstallTimerRef.current) {
       clearTimeout(demoVisualInstallTimerRef.current)
@@ -3853,8 +3858,8 @@ export function App(): React.JSX.Element {
     for (const sheet of selected.sheets) {
       for (const pivot of sheet.pivotTables) {
         if (pivot.cachePath === null) continue
-        void sheetsPlatform().api
-          .readPivotDefinition({
+        void sheetsPlatform()
+          .api.readPivotDefinition({
             sessionId: selected.sessionId,
             path: pivot.path,
             cachePath: pivot.cachePath,

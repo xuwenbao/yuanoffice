@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { dispatchLiveTool } from '../src/dispatch'
 import { EditorRegistry } from '../src/registry'
 
-function registryWith(run: (command: string, payload: unknown) => Promise<unknown>): EditorRegistry {
+function registryWith(
+  run: (command: string, payload: unknown) => Promise<unknown>,
+): EditorRegistry {
   const registry = new EditorRegistry(1_000)
   registry.register({
     editorId: 'e1',
@@ -41,9 +43,14 @@ describe('live tool dispatch', () => {
     const registry = registryWith(async () => ({}))
     registry.update('e1', { dirty: true })
     await expect(
-      dispatchLiveTool(registry, 'open_documents', { action: 'close', target: 'e1' }, {
-        save: async () => ({ path: '/docs/a.docx' }),
-      }),
+      dispatchLiveTool(
+        registry,
+        'open_documents',
+        { action: 'close', target: 'e1' },
+        {
+          save: async () => ({ path: '/docs/a.docx' }),
+        },
+      ),
     ).rejects.toMatchObject({ reason: 'unsaved_changes' })
   })
 
@@ -52,9 +59,14 @@ describe('live tool dispatch', () => {
     registry.markDisconnected('e1', 0)
     expect(registry.paths()).toEqual(['/docs/a.docx'])
     return expect(
-      dispatchLiveTool(registry, 'read_document', { document: 'e1' }, {
-        save: async () => ({ path: '/docs/a.docx' }),
-      }),
+      dispatchLiveTool(
+        registry,
+        'read_document',
+        { document: 'e1' },
+        {
+          save: async () => ({ path: '/docs/a.docx' }),
+        },
+      ),
     ).rejects.toMatchObject({ reason: 'editor_disconnected' })
   })
 })

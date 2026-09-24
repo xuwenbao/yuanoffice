@@ -10,5 +10,5 @@ export const it = {
   save: 'Salva',
   discard: 'Ignora',
   cancel: 'Annulla',
-  failed: 'Impossibile leggere questa cartella'
+  failed: 'Impossibile leggere questa cartella',
 } satisfies Record<keyof typeof zh, string>

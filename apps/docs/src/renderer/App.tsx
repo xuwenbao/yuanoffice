@@ -1441,8 +1441,8 @@ export function App() {
           const ch = node.data[after.anchorOffset - 1]
           if (ch === ' ' || ch === '\u00a0') node.deleteData(after.anchorOffset - 1, 1)
         }
-        void docsPlatform().api
-          .respellKick()
+        void docsPlatform()
+          .api.respellKick()
           .catch(() => undefined)
           .then(async () => {
             try {
@@ -1959,7 +1959,10 @@ export function App() {
     let changed = false
     if (result.openPassword !== undefined) {
       const cur = fileCtxRef.current.doc
-      const res = await docsPlatform().api.setDocPassword(cur?.filePath ?? null, result.openPassword)
+      const res = await docsPlatform().api.setDocPassword(
+        cur?.filePath ?? null,
+        result.openPassword,
+      )
       if (res.ok) {
         setDoc((d) => (d ? { ...d, encrypted: !!result.openPassword } : d))
         // the on-disk file only changes on the next save

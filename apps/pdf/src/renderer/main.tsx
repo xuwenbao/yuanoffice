@@ -26,14 +26,18 @@ function applyTheme(theme: UiTheme): void {
 void (async () => {
   await installPdfHost()
   const [lang, theme] = await Promise.all([
-    pdfPlatform().api.getLanguage().catch(() => 'zh' as const),
-    pdfPlatform().api.getTheme().catch(() => 'system' as const),
+    pdfPlatform()
+      .api.getLanguage()
+      .catch(() => 'zh' as const),
+    pdfPlatform()
+      .api.getTheme()
+      .catch(() => 'system' as const),
   ])
   document.documentElement.lang = htmlLang(lang as Lang)
   applyTheme(theme)
   pdfPlatform().api.onThemeChanged(applyTheme)
-  void pdfPlatform().api
-    ?.getAiPanelPrefs?.()
+  void pdfPlatform()
+    .api?.getAiPanelPrefs?.()
     .then(applyAiPanelPrefs)
     .catch(() => {})
   pdfPlatform().api?.onAiPanelPrefsChanged?.(applyAiPanelPrefs)

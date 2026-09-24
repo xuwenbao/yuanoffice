@@ -10,5 +10,5 @@ export const id = {
   save: 'Simpan',
   discard: 'Buang',
   cancel: 'Batal',
-  failed: 'Tidak dapat membaca folder ini'
+  failed: 'Tidak dapat membaca folder ini',
 } satisfies Record<keyof typeof zh, string>

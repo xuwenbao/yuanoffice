@@ -10,5 +10,5 @@ export const cs = {
   save: 'Uložit',
   discard: 'Zahodit',
   cancel: 'Zrušit',
-  failed: 'Tuto složku nelze načíst'
+  failed: 'Tuto složku nelze načíst',
 } satisfies Record<keyof typeof zh, string>

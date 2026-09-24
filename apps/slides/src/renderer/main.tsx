@@ -48,8 +48,12 @@ async function bootstrap(): Promise<void> {
     // per-promise catch: standalone runs have no app:get-theme handler, and
     // that rejection must not drop a resolved language
     ;[lang, theme] = await Promise.all([
-      slidesPlatform().api.getLanguage().catch(() => 'zh' as const),
-      slidesPlatform().api.getTheme().catch(() => 'system' as const),
+      slidesPlatform()
+        .api.getLanguage()
+        .catch(() => 'zh' as const),
+      slidesPlatform()
+        .api.getTheme()
+        .catch(() => 'system' as const),
     ])
   } catch {
     /* dev renderer without the preload bridge */
@@ -60,8 +64,8 @@ async function bootstrap(): Promise<void> {
   if (mode !== 'audience') {
     applyTheme(theme)
     slidesPlatform().api?.onThemeChanged(applyTheme)
-    void slidesPlatform().api
-      ?.getAiPanelPrefs?.()
+    void slidesPlatform()
+      .api?.getAiPanelPrefs?.()
       .then(applyAiPanelPrefs)
       .catch(() => {})
     slidesPlatform().api?.onAiPanelPrefsChanged?.(applyAiPanelPrefs)

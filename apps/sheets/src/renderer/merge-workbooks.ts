@@ -290,7 +290,9 @@ export async function mergeSourcesIntoCurrent(
     return { importedSheets, files: sources.length, sheetNames }
   } finally {
     for (const file of sources) {
-      void sheetsPlatform().api.closeWorkbook(file.sessionId).catch(() => {})
+      void sheetsPlatform()
+        .api.closeWorkbook(file.sessionId)
+        .catch(() => {})
     }
   }
 }

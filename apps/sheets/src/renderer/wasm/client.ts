@@ -7,7 +7,10 @@ export interface XlsxReactor {
   dispatch(line: string): string
 }
 
-export async function loadXlsxReactor(wasmUrl: string, wasiImport: WebAssembly.Imports): Promise<XlsxReactor> {
+export async function loadXlsxReactor(
+  wasmUrl: string,
+  wasiImport: WebAssembly.Imports,
+): Promise<XlsxReactor> {
   const bytes = await fetch(wasmUrl).then((response) => response.arrayBuffer())
   const { instance } = await WebAssembly.instantiate(bytes, wasiImport)
   const exports = instance.exports as {
@@ -22,7 +25,8 @@ export async function loadXlsxReactor(wasmUrl: string, wasiImport: WebAssembly.I
   const alloc = exports.xlsx_alloc
   const dispatch = exports.xlsx_dispatch
   const free = exports.xlsx_free
-  if (!memory || !alloc || !dispatch || !free) throw new Error('xlsx wasm is missing the reactor exports')
+  if (!memory || !alloc || !dispatch || !free)
+    throw new Error('xlsx wasm is missing the reactor exports')
   return {
     dispatch(line: string) {
       const encoded = new TextEncoder().encode(`${line}\0`)

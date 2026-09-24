@@ -42,10 +42,13 @@ export class ServiceFiles {
   }
 
   async read(path: string): Promise<Uint8Array> {
-    const response = await fetch(`${this.baseUrl}/api/files/read?path=${encodeURIComponent(path)}`, {
-      credentials: 'same-origin',
-      headers: this.headers(),
-    })
+    const response = await fetch(
+      `${this.baseUrl}/api/files/read?path=${encodeURIComponent(path)}`,
+      {
+        credentials: 'same-origin',
+        headers: this.headers(),
+      },
+    )
     if (!response.ok) throw new Error(await errorMessage(response))
     return new Uint8Array(await response.arrayBuffer())
   }
@@ -53,7 +56,12 @@ export class ServiceFiles {
   async write(path: string, data: Uint8Array, overwrite: boolean): Promise<WriteResult> {
     const response = await fetch(
       `${this.baseUrl}/api/files/write?path=${encodeURIComponent(path)}&overwrite=${overwrite ? '1' : '0'}`,
-      { method: 'PUT', credentials: 'same-origin', headers: this.headers(), body: data as BufferSource },
+      {
+        method: 'PUT',
+        credentials: 'same-origin',
+        headers: this.headers(),
+        body: data as BufferSource,
+      },
     )
     if (!response.ok) throw new Error(await errorMessage(response))
     return (await response.json()) as WriteResult

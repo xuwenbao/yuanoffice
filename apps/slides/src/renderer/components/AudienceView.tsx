@@ -95,11 +95,13 @@ export function AudienceView() {
   useEffect(() => {
     let stop = false
     const tryLoad = (attempt: number) => {
-      void slidesPlatform().api.getRenderSlides().then((r) => {
-        if (stop) return
-        if (r && r.length > 0) setSlides(r)
-        else if (attempt < 20) window.setTimeout(() => tryLoad(attempt + 1), 250)
-      })
+      void slidesPlatform()
+        .api.getRenderSlides()
+        .then((r) => {
+          if (stop) return
+          if (r && r.length > 0) setSlides(r)
+          else if (attempt < 20) window.setTimeout(() => tryLoad(attempt + 1), 250)
+        })
     }
     tryLoad(0)
     return () => {
@@ -157,9 +159,11 @@ export function AudienceView() {
       }
     })
     // When mounted after the presenter's first broadcast, snapshot the current state
-    void slidesPlatform().api.audienceReady().then((s) => {
-      if (s) setSync((prev) => prev ?? s)
-    })
+    void slidesPlatform()
+      .api.audienceReady()
+      .then((s) => {
+        if (s) setSync((prev) => prev ?? s)
+      })
     return () => {
       offSync()
       offInk()

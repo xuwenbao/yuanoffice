@@ -25,7 +25,11 @@ import { activeCsvSheet, handleExportCsv, serializeActiveSheetCsv } from '../ren
 import type { CellState } from '@genoffice/xlsx-gateway/domain/workbook.types'
 import { verifiedFormulaValues } from '../renderer/formula-values'
 import { t } from '../renderer/i18n/locale'
-import { abortStagedEditsTransfer, stageEditsForSave, type StagedEdits } from '../renderer/save-edits-staging'
+import {
+  abortStagedEditsTransfer,
+  stageEditsForSave,
+  type StagedEdits,
+} from '../renderer/save-edits-staging'
 import { showToast } from '../renderer/toast-bus'
 import { captureUndoCarry, hasPendingUndoCarry, stashUndoCarry } from '../renderer/undo-carry'
 import {
@@ -376,14 +380,16 @@ export async function handleSave(
   if (mode === 'recovery') {
     // Best-effort; a failure only means this tick's copy is skipped — but an
     // unconsumed transfer must not sit in main-process memory until expiry.
-    const written = await sheetsPlatform().api.writeWorkbookRecovery(payload).catch(async () => {
-      await abortStagedEditsTransfer(
-        sheetsPlatform().api,
-        state.file.sessionId,
-        staged.editsTransferId,
-      )
-      return { ok: false }
-    })
+    const written = await sheetsPlatform()
+      .api.writeWorkbookRecovery(payload)
+      .catch(async () => {
+        await abortStagedEditsTransfer(
+          sheetsPlatform().api,
+          state.file.sessionId,
+          staged.editsTransferId,
+        )
+        return { ok: false }
+      })
     return { ok: written.ok === true }
   }
   try {
@@ -524,7 +530,11 @@ export async function handleSave(
   } catch (error: unknown) {
     // The save may have failed before consuming the chunked transfer (e.g.
     // request validation); freeing it is a no-op when it was consumed.
-    await abortStagedEditsTransfer(sheetsPlatform().api, state.file.sessionId, staged.editsTransferId)
+    await abortStagedEditsTransfer(
+      sheetsPlatform().api,
+      state.file.sessionId,
+      staged.editsTransferId,
+    )
     const message = stripIpcErrorWrapper(error instanceof Error ? error.message : '')
     const failed = localizeSaveError(message) ?? (message || t('appSaveFailed'))
     ctx.setMessage(failed)

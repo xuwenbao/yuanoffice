@@ -28,8 +28,8 @@ export function useFontCatalog(): {
   const [failed, setFailed] = useState<ReadonlySet<string>>(new Set())
 
   const load = useCallback(() => {
-    void slidesPlatform().api
-      .fontCatalog?.()
+    void slidesPlatform()
+      .api.fontCatalog?.()
       .then((c) => {
         cached = c
         setCatalog(c)

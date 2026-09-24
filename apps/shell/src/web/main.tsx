@@ -44,7 +44,10 @@ function Shell() {
     void fetch('/api/session', { credentials: 'same-origin' })
       .then(() => setReady(true))
       .catch(() => setReady(true))
-    const link = new ControlLink(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`, '')
+    const link = new ControlLink(
+      `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`,
+      '',
+    )
     link.start('shell')
     link.onOpen((path, editorId) => openPath(path, editorId))
     link.onFocus((editorId) => setActive(editorId))
@@ -162,7 +165,9 @@ function Shell() {
       </header>
       <div className="web-stage">
         <div className={active ? 'back' : ''}>
-          {ready ? <HomeView files={files} library={library} onLibrary={updateLibrary} onOpen={openPath} /> : null}
+          {ready ? (
+            <HomeView files={files} library={library} onLibrary={updateLibrary} onOpen={openPath} />
+          ) : null}
         </div>
         <div className={`frames${active ? '' : ' back'}`}>
           {tabs.map((tab) => (
@@ -208,7 +213,11 @@ function Shell() {
             <button
               type="button"
               onClick={() => {
-                void drafts.put({ path: prompt.path, updatedAt: Date.now(), bytes: new ArrayBuffer(0) })
+                void drafts.put({
+                  path: prompt.path,
+                  updatedAt: Date.now(),
+                  bytes: new ArrayBuffer(0),
+                })
                 setTabs((current) => current.filter((tab) => tab.id !== prompt.id))
                 if (active === prompt.editorId) setActive(null)
                 setPrompt(null)

@@ -192,16 +192,16 @@ export function MasterView({ initialItems, onClose }: Props) {
             {
               label: t('appMasterFillNone'),
               onClick: () =>
-                void slidesPlatform().api
-                  .masterEditFill({ sourceId: id, fill: 'none' })
+                void slidesPlatform()
+                  .api.masterEditFill({ sourceId: id, fill: 'none' })
                   .then(applyCurrent),
             },
             { label: t('appMasterStroke'), onClick: () => pickColor('stroke', id) },
             {
               label: t('appMasterStrokeNone'),
               onClick: () =>
-                void slidesPlatform().api
-                  .masterEditStroke({ sourceId: id, stroke: null })
+                void slidesPlatform()
+                  .api.masterEditStroke({ sourceId: id, stroke: null })
                   .then(applyCurrent),
             },
           ]

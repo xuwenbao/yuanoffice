@@ -1,8 +1,4 @@
-import {
-  FRAME_PROTOCOL,
-  parseFrameToShell,
-  type FrameToShellMessage,
-} from './frame-wire.js'
+import { FRAME_PROTOCOL, parseFrameToShell, type FrameToShellMessage } from './frame-wire.js'
 
 export interface FrameRecord {
   id: string
@@ -22,10 +18,7 @@ export function installFrameHost(expectedOrigin: string): FrameHost {
   const frames = new Map<string, Window>()
   const handlers = new Set<(message: FrameToShellMessage) => void>()
   const onMessage = (event: MessageEvent): void => {
-    const parsed = parseFrameToShell(
-      { origin: event.origin, data: event.data },
-      expectedOrigin,
-    )
+    const parsed = parseFrameToShell({ origin: event.origin, data: event.data }, expectedOrigin)
     if (!parsed) return
     const expected = frames.get(parsed.frameId)
     if (!expected || event.source !== expected) return

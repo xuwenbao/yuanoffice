@@ -42,14 +42,14 @@ flowchart LR
 
 ## 2. Decisions
 
-| Date | Decision | Why |
-| --- | --- | --- |
-| 2026-09-24 | Base is official GenOffice, not a fork merge of ALI-startup/genoffice (SamuGen). | That tree was 401 commits behind and 61 ahead, had deleted Electron, renamed packages to `@samugen/*`, and added an AI BFF. Re-implement the seam; do not cherry-pick. |
-| 2026-09-24 | Keep both hosts. | Desktop behaviour is unchanged. Web is a second build (`dist/web`, never `apps/*/out`). |
-| 2026-09-24 | Files are read and written only by the control service, addressed by absolute path (`DocumentRef` is `{ kind: 'local', path }`). | The agent can target a path, and a background write can see that the file is open. |
-| 2026-09-24 | Live tools keep the official names (`read_document`, `insert_content`, `replace_blocks`, `apply_ops`, `save_document`, `open_documents`) plus `document_status`. | External skills written for the desktop MCP keep working. Save semantics differ and are stated on the tool. |
-| 2026-09-24 | `search` / `image` / `media` are off unless `GENOFFICE_ENABLE_CLOUD=1`. | This distribution does not call a model. |
-| 2026-09-24 | `@genoffice/file-parse` does not depend on `@genoffice/ai-provider`. | The only mention is a comment in `packages/file-parse/src/parse.ts`. Nothing to strip. |
+| Date       | Decision                                                                                                                                                         | Why                                                                                                                                                                    |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-24 | Base is official GenOffice, not a fork merge of ALI-startup/genoffice (SamuGen).                                                                                 | That tree was 401 commits behind and 61 ahead, had deleted Electron, renamed packages to `@samugen/*`, and added an AI BFF. Re-implement the seam; do not cherry-pick. |
+| 2026-09-24 | Keep both hosts.                                                                                                                                                 | Desktop behaviour is unchanged. Web is a second build (`dist/web`, never `apps/*/out`).                                                                                |
+| 2026-09-24 | Files are read and written only by the control service, addressed by absolute path (`DocumentRef` is `{ kind: 'local', path }`).                                 | The agent can target a path, and a background write can see that the file is open.                                                                                     |
+| 2026-09-24 | Live tools keep the official names (`read_document`, `insert_content`, `replace_blocks`, `apply_ops`, `save_document`, `open_documents`) plus `document_status`. | External skills written for the desktop MCP keep working. Save semantics differ and are stated on the tool.                                                            |
+| 2026-09-24 | `search` / `image` / `media` are off unless `GENOFFICE_ENABLE_CLOUD=1`.                                                                                          | This distribution does not call a model.                                                                                                                               |
+| 2026-09-24 | `@genoffice/file-parse` does not depend on `@genoffice/ai-provider`.                                                                                             | The only mention is a comment in `packages/file-parse/src/parse.ts`. Nothing to strip.                                                                                 |
 
 Upstream sync: `upstream` is `https://github.com/genspark-ai/genoffice.git`.
 Fast-forward this branch onto `upstream/main` when it is a strict descendant.
@@ -92,14 +92,14 @@ adapters. App-specific preload types stay in the app.
 
 Package `@genoffice/control-service`, started with `genoffice serve`.
 
-| Surface | Role |
-| --- | --- |
-| static `dist/web` | Shell at `/`, editors at `/app/<kind>/`, same origin. `.mjs` is served as JavaScript so the PDF.js worker can load, and `.wasm` is served as `application/wasm` |
-| `GET/PUT /api/files/*` | List, stat, read, atomic write, and create a blank docx/xlsx/pptx/pdf inside the allowed roots. An empty list path returns those roots as directories. List and stat include `mtimeMs` and `sizeBytes` |
-| `GET /ws` | Editor channel and shell channel |
-| `POST /mcp` | JSON-RPC MCP: `initialize`, `tools/list`, `tools/call` |
-| `control.json` + socket | Same discovery as the desktop shell, protocol 2 |
-| `open-documents.json` | Same shape as the desktop registry, plus `source: "control-service"` |
+| Surface                 | Role                                                                                                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| static `dist/web`       | Shell at `/`, editors at `/app/<kind>/`, same origin. `.mjs` is served as JavaScript so the PDF.js worker can load, and `.wasm` is served as `application/wasm`                                        |
+| `GET/PUT /api/files/*`  | List, stat, read, atomic write, and create a blank docx/xlsx/pptx/pdf inside the allowed roots. An empty list path returns those roots as directories. List and stat include `mtimeMs` and `sizeBytes` |
+| `GET /ws`               | Editor channel and shell channel                                                                                                                                                                       |
+| `POST /mcp`             | JSON-RPC MCP: `initialize`, `tools/list`, `tools/call`                                                                                                                                                 |
+| `control.json` + socket | Same discovery as the desktop shell, protocol 2                                                                                                                                                        |
+| `open-documents.json`   | Same shape as the desktop registry, plus `source: "control-service"`                                                                                                                                   |
 
 Security:
 
@@ -123,12 +123,12 @@ time. The desktop shell's socket accepts the same command names and answers
 `unsupported`: live editing is the control service's job, so a desktop
 `control.json` cannot be mistaken for a successful edit.
 
-| Tool | Result |
-| --- | --- |
-| `read_document` / `insert_content` / `replace_blocks` / `apply_ops` | `{ applied, revision, dirty: true, persisted: false }` |
-| `document_status` | `{ dirty, revision, savedRevision, lastSavedAt, connected }` |
-| `save_document` | `{ persisted: true, savedRevision, path }` written back to the document's own path unless `path` is set; an existing target needs `overwrite: true` |
-| `open_documents` `close` | Refuses a dirty document with `unsaved_changes` unless `unsaved` is `save` or `discard` |
+| Tool                                                                | Result                                                                                                                                              |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `read_document` / `insert_content` / `replace_blocks` / `apply_ops` | `{ applied, revision, dirty: true, persisted: false }`                                                                                              |
+| `document_status`                                                   | `{ dirty, revision, savedRevision, lastSavedAt, connected }`                                                                                        |
+| `save_document`                                                     | `{ persisted: true, savedRevision, path }` written back to the document's own path unless `path` is set; an existing target needs `overwrite: true` |
+| `open_documents` `close`                                            | Refuses a dirty document with `unsaved_changes` unless `unsaved` is `save` or `discard`                                                             |
 
 `apply_ops` may include `baseRevision`. A mismatch returns `revision_conflict`
 and does not run.
@@ -155,12 +155,12 @@ Desktop registrations keep the old `--force` behaviour.
 
 ## 7. Phase status
 
-| Phase | State | What landed |
-| --- | --- | --- |
-| 0 Upstream | done | `upstream` remote; fast-forward `f36446f` to `8355a8f` |
-| 1 Docs web | done | Platform packages, docs seam (`docsPlatform()`), web host at `dist/web/app/docs`, control-service file API. Web bundle has no `window.desktop`, `electron`, or `ai-provider`. Docx bytes round-trip through `/api/files`. The docs page allows `blob:` on `connect-src` so the opened file can be fetched from its blob URL. |
-| 2 Live control | done | `editor-control`, `/mcp`, `genoffice editor`, lease, `--force` ignored for `source: "control-service"`. Playwright opens `/harness/editor.html`: apply changes the page and leaves the file unchanged. |
-| 3 Web shell | done | `apps/shell/src/web`: same-origin iframes, frame protocol, shell WebSocket (`open` / `focus`), IndexedDB drafts, route priority in `tabs.ts` (tested). The home page follows the desktop home (recent, starred, folders, new file) and talks only to the file API. |
+| Phase                 | State          | What landed                                                                                                                                                                                                                                                                                                                                                                                                        |
+| --------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0 Upstream            | done           | `upstream` remote; fast-forward `f36446f` to `8355a8f`                                                                                                                                                                                                                                                                                                                                                             |
+| 1 Docs web            | done           | Platform packages, docs seam (`docsPlatform()`), web host at `dist/web/app/docs`, control-service file API. Web bundle has no `window.desktop`, `electron`, or `ai-provider`. Docx bytes round-trip through `/api/files`. The docs page allows `blob:` on `connect-src` so the opened file can be fetched from its blob URL.                                                                                       |
+| 2 Live control        | done           | `editor-control`, `/mcp`, `genoffice editor`, lease, `--force` ignored for `source: "control-service"`. Playwright opens `/harness/editor.html`: apply changes the page and leaves the file unchanged.                                                                                                                                                                                                             |
+| 3 Web shell           | done           | `apps/shell/src/web`: same-origin iframes, frame protocol, shell WebSocket (`open` / `focus`), IndexedDB drafts, route priority in `tabs.ts` (tested). The home page follows the desktop home (recent, starred, folders, new file) and talks only to the file API.                                                                                                                                                 |
 | 4 PDF, slides, sheets | done with gaps | The shell iframe for every kind is `/app/{kind}/index.html` (the desktop page). PDF opens through `ServiceFiles` into the existing viewer. Slides open, render, text, transform, and save live in `src/domain/document.ts`; the browser holds the deck with `pptx-engine` and the desktop main process calls those functions. Sheets mounts the Univer page. Opening a workbook needs the wasm reactor (see gaps). |
 
 ## 8. Known gaps
@@ -196,6 +196,6 @@ Absent on purpose, not a silent success:
 
 ## 9. Upstream sync log
 
-| Date | Range | Notes |
-| --- | --- | --- |
+| Date       | Range                | Notes                                                                                                                                       |
+| ---------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-09-24 | `f36446f`..`8355a8f` | Fast-forward. Three upstream fixes (chart extrema, slides redo routing, macOS font test assets). No web files existed yet, so no conflicts. |

@@ -31,8 +31,8 @@ export function ScreenshotDialog({
     let stale = false
     setState({ phase: 'loading' })
     setFailed(false)
-    sheetsPlatform().api
-      .captureScreenSources()
+    sheetsPlatform()
+      .api.captureScreenSources()
       .then((result) => {
         if (stale) return
         if (result.status === 'denied') setState({ phase: 'denied' })
@@ -52,8 +52,8 @@ export function ScreenshotDialog({
     if (capturingId !== null) return
     setCapturingId(id)
     setFailed(false)
-    sheetsPlatform().api
-      .captureScreenSource({ id })
+    sheetsPlatform()
+      .api.captureScreenSource({ id })
       .then((result) => {
         if (!result) {
           setFailed(true)

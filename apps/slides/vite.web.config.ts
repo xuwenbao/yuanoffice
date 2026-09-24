@@ -5,9 +5,15 @@ import { defineConfig } from 'vite'
 const root = __dirname
 
 const workspaceAlias = {
-  '@genoffice/pptx-engine/table-grid': resolve(root, '../../packages/pptx-engine/src/table-grid.ts'),
+  '@genoffice/pptx-engine/table-grid': resolve(
+    root,
+    '../../packages/pptx-engine/src/table-grid.ts',
+  ),
   '@genoffice/pptx-engine/identity': resolve(root, '../../packages/pptx-engine/src/identity.ts'),
-  '@genoffice/pptx-engine/named-action': resolve(root, '../../packages/pptx-engine/src/named-action.ts'),
+  '@genoffice/pptx-engine/named-action': resolve(
+    root,
+    '../../packages/pptx-engine/src/named-action.ts',
+  ),
   '@genoffice/pptx-engine/custgeom': resolve(root, '../../packages/pptx-engine/src/custgeom.ts'),
   '@genoffice/pptx-engine/background-promote': resolve(
     root,
@@ -28,7 +34,7 @@ const workspaceAlias = {
   ),
   '@genoffice/pipelines/slides': resolve(root, '../../packages/pipelines/src/slides/index.ts'),
   '@genoffice/docx-engine/metafile': resolve(root, '../../packages/docx-engine/src/metafile.ts'),
-      '@genoffice/docx-engine/math': resolve(root, '../../packages/docx-engine/src/math.ts'),
+  '@genoffice/docx-engine/math': resolve(root, '../../packages/docx-engine/src/math.ts'),
   'node:zlib': resolve(root, 'src/renderer/shims/node-zlib.ts'),
 }
 

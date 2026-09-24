@@ -349,8 +349,8 @@ export function buildCtxItems(ctx: ActionCtx): Array<CtxItem | null> {
         {
           label: t('appCtxCellAnchorTop'),
           onClick: () =>
-            void slidesPlatform().api
-              .setTableCellAnchor({
+            void slidesPlatform()
+              .api.setTableCellAnchor({
                 slideIndex: current,
                 sourceId: ctxMenu.targetId,
                 row: cell.row,
@@ -362,8 +362,8 @@ export function buildCtxItems(ctx: ActionCtx): Array<CtxItem | null> {
         {
           label: t('appCtxCellAnchorMiddle'),
           onClick: () =>
-            void slidesPlatform().api
-              .setTableCellAnchor({
+            void slidesPlatform()
+              .api.setTableCellAnchor({
                 slideIndex: current,
                 sourceId: ctxMenu.targetId,
                 row: cell.row,
@@ -375,8 +375,8 @@ export function buildCtxItems(ctx: ActionCtx): Array<CtxItem | null> {
         {
           label: t('appCtxCellAnchorBottom'),
           onClick: () =>
-            void slidesPlatform().api
-              .setTableCellAnchor({
+            void slidesPlatform()
+              .api.setTableCellAnchor({
                 slideIndex: current,
                 sourceId: ctxMenu.targetId,
                 row: cell.row,
@@ -403,8 +403,8 @@ export function buildCtxItems(ctx: ActionCtx): Array<CtxItem | null> {
           label: t('appCtxCellShading'),
           swatches: [...TABLE_SHADING_COLORS, 'none'],
           onSwatch: (c) =>
-            void slidesPlatform().api
-              .editTableStyle({
+            void slidesPlatform()
+              .api.editTableStyle({
                 slideIndex: current,
                 sourceId: ctxMenu.targetId,
                 shadingColor: c,

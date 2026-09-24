@@ -10,5 +10,5 @@ export const nl = {
   save: 'Opslaan',
   discard: 'Weggooien',
   cancel: 'Annuleren',
-  failed: 'Deze map kan niet worden gelezen'
+  failed: 'Deze map kan niet worden gelezen',
 } satisfies Record<keyof typeof zh, string>

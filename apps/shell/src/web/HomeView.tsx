@@ -26,7 +26,12 @@ const lang = shellLang()
 const t = (key: HomeKey, params?: Record<string, string | number>) => translate(lang, key, params)
 const tw = (key: keyof typeof zh) => shellStrings(lang, key)
 
-const ICONS: Record<string, string> = { docx: iconDocx, xlsx: iconXlsx, pptx: iconPptx, pdf: iconPdf }
+const ICONS: Record<string, string> = {
+  docx: iconDocx,
+  xlsx: iconXlsx,
+  pptx: iconPptx,
+  pdf: iconPdf,
+}
 const FILTERS: { key: string; label: HomeKey }[] = [
   { key: 'all', label: 'filterAll' },
   { key: 'docx', label: 'filterDocs' },
@@ -40,7 +45,14 @@ const NEW_ITEMS: { ext: 'docx' | 'xlsx' | 'pptx' | 'pdf'; title: HomeKey }[] = [
   { ext: 'pptx', title: 'newSlide' },
   { ext: 'pdf', title: 'newPdf' },
 ]
-const GREET_ASK: HomeKey[] = ['greetAsk1', 'greetAsk2', 'greetAsk3', 'greetAsk4', 'greetAsk5', 'greetAsk6']
+const GREET_ASK: HomeKey[] = [
+  'greetAsk1',
+  'greetAsk2',
+  'greetAsk3',
+  'greetAsk4',
+  'greetAsk5',
+  'greetAsk6',
+]
 
 interface ListedFile {
   path: string
@@ -73,7 +85,9 @@ export function HomeView({
   const [query, setQuery] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
-  const [ask] = useState(() => GREET_ASK[Math.floor(Math.random() * GREET_ASK.length)] ?? 'greetAsk1')
+  const [ask] = useState(
+    () => GREET_ASK[Math.floor(Math.random() * GREET_ASK.length)] ?? 'greetAsk1',
+  )
 
   useEffect(() => {
     let alive = true
@@ -131,7 +145,10 @@ export function HomeView({
 
   async function loadChildren(path: string): Promise<void> {
     const entries = await files.list(path)
-    setChildren((current) => ({ ...current, [path]: entries.filter((entry) => entry.kind === 'dir') }))
+    setChildren((current) => ({
+      ...current,
+      [path]: entries.filter((entry) => entry.kind === 'dir'),
+    }))
     setExpanded((current) => new Set([...current, path]))
   }
 
@@ -164,19 +181,35 @@ export function HomeView({
   const folderRows = useMemo(() => {
     const filesOnly = listing.filter((entry) => entry.kind === 'file')
     return filesOnly
-      .filter((entry) => matchesExt(entry.name, filter) && matchesQuery(entry.name, parentName(entry.path), query))
+      .filter(
+        (entry) =>
+          matchesExt(entry.name, filter) && matchesQuery(entry.name, parentName(entry.path), query),
+      )
       .map((entry) => toListed(entry, library))
   }, [listing, filter, query, library])
   const foldersHere = listing.filter(
     (entry) => entry.kind === 'dir' && matchesQuery(entry.name, parentName(entry.path), query),
   )
   const rows = (folder ? folderRows : filter === 'starred' ? starredRows : recentRows).filter(
-    (row) => matchesExt(row.name, filter === 'starred' ? 'all' : filter) && matchesQuery(row.name, row.location, query),
+    (row) =>
+      matchesExt(row.name, filter === 'starred' ? 'all' : filter) &&
+      matchesQuery(row.name, row.location, query),
   )
-  const view: 'recent' | 'starred' | 'folder' = folder ? 'folder' : filter === 'starred' ? 'starred' : 'recent'
+  const view: 'recent' | 'starred' | 'folder' = folder
+    ? 'folder'
+    : filter === 'starred'
+      ? 'starred'
+      : 'recent'
 
   const hour = new Date().getHours()
-  const greetKey: HomeKey = hour < 6 ? 'greetEvening' : hour < 12 ? 'greetMorning' : hour < 18 ? 'greetAfternoon' : 'greetEvening'
+  const greetKey: HomeKey =
+    hour < 6
+      ? 'greetEvening'
+      : hour < 12
+        ? 'greetMorning'
+        : hour < 18
+          ? 'greetAfternoon'
+          : 'greetEvening'
   const cjk = lang === 'zh' || lang === 'zh-TW' || lang === 'ja'
   const greeting = `${t(greetKey)}${cjk ? '。' : '. '}`
 
@@ -251,7 +284,13 @@ export function HomeView({
           </div>
           <div className="quick-cards">
             {NEW_ITEMS.map((item) => (
-              <button key={item.ext} className="quick-card" type="button" disabled={busy} onClick={() => void create(item.ext)}>
+              <button
+                key={item.ext}
+                className="quick-card"
+                type="button"
+                disabled={busy}
+                onClick={() => void create(item.ext)}
+              >
                 <img src={ICONS[item.ext]} width={30} height={30} alt="" />
                 <span className="quick-text">
                   <span className="quick-title">{t(item.title)}</span>
@@ -276,7 +315,10 @@ export function HomeView({
             </button>
           </div>
         </section>
-        <section className="recents" aria-label={folder ? parentName(folder) || folder : t('secRecent')}>
+        <section
+          className="recents"
+          aria-label={folder ? parentName(folder) || folder : t('secRecent')}
+        >
           <div className="recents-toolbar">
             <div className="filter-pills" role="tablist">
               {FILTERS.map((item) => (
@@ -301,7 +343,11 @@ export function HomeView({
             </div>
             <div className="recents-heading">
               <span className="section-label">
-                {folder ? folder.split(/[/\\]/).filter(Boolean).pop() : view === 'starred' ? t('secStarred') : t('secRecent')}
+                {folder
+                  ? folder.split(/[/\\]/).filter(Boolean).pop()
+                  : view === 'starred'
+                    ? t('secStarred')
+                    : t('secRecent')}
               </span>
               <span className="file-count">{rows.length}</span>
             </div>
@@ -311,7 +357,11 @@ export function HomeView({
             <ul className="recent-list">
               {foldersHere.map((entry) => (
                 <li key={entry.path}>
-                  <button className="recent-item folder-item" type="button" onClick={() => selectFolder(entry.path)}>
+                  <button
+                    className="recent-item folder-item"
+                    type="button"
+                    onClick={() => selectFolder(entry.path)}
+                  >
                     <span className="recent-icon">
                       <FolderGlyph />
                     </span>
@@ -365,7 +415,9 @@ export function HomeView({
                       <span className="recent-name">{row.name}</span>
                       <span className="recent-path">{row.location}</span>
                       <span className="recent-time">{formatModified(row.mtimeMs, lang)}</span>
-                      <span className="recent-size">{row.missing ? '' : formatSize(row.sizeBytes)}</span>
+                      <span className="recent-size">
+                        {row.missing ? '' : formatSize(row.sizeBytes)}
+                      </span>
                       <button
                         className={`star-btn${row.starred ? ' starred' : ''}`}
                         type="button"
@@ -406,7 +458,11 @@ export function HomeView({
   )
 }
 
-function rowsFromLibrary(library: LibraryRecord[], stats: Record<string, FileEntry | null>, starredOnly: boolean): ListedFile[] {
+function rowsFromLibrary(
+  library: LibraryRecord[],
+  stats: Record<string, FileEntry | null>,
+  starredOnly: boolean,
+): ListedFile[] {
   return library
     .filter((record) => !starredOnly || record.starred)
     .map((record) => {
@@ -454,7 +510,12 @@ function NavButton({
       {icon === 'recent' ? (
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <circle cx="8" cy="8" r="6.2" stroke="currentColor" strokeWidth="1.3" />
-          <path d="M8 4.8V8l2.2 1.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+          <path
+            d="M8 4.8V8l2.2 1.6"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+          />
         </svg>
       ) : (
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -493,10 +554,31 @@ function FolderNode({
   const kids = childrenOf[entry.path] ?? []
   return (
     <li className="tree-item">
-      <div className={`tree-row${selected === entry.path ? ' active' : ''}`} style={{ paddingLeft: 8 + depth * 14 }}>
-        <button className="tree-chevron" type="button" aria-hidden="true" tabIndex={-1} onClick={() => onToggle(entry.path)}>
-          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" style={{ transform: open ? 'rotate(90deg)' : undefined }}>
-            <path d="M4.5 2.5l4 3.5-4 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" fill="none" />
+      <div
+        className={`tree-row${selected === entry.path ? ' active' : ''}`}
+        style={{ paddingLeft: 8 + depth * 14 }}
+      >
+        <button
+          className="tree-chevron"
+          type="button"
+          aria-hidden="true"
+          tabIndex={-1}
+          onClick={() => onToggle(entry.path)}
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+            aria-hidden="true"
+            style={{ transform: open ? 'rotate(90deg)' : undefined }}
+          >
+            <path
+              d="M4.5 2.5l4 3.5-4 3.5"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinecap="round"
+              fill="none"
+            />
           </svg>
         </button>
         <button className="tree-name" type="button" onClick={() => onSelect(entry.path)}>
@@ -551,10 +633,12 @@ function formatSize(bytes: number): string {
 function formatModified(mtimeMs: number, language: Lang): string {
   if (!mtimeMs) return ''
   const date = new Date(mtimeMs)
-  const start = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime()
+  const start = (value: Date) =>
+    new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime()
   const days = Math.round((start(new Date()) - start(date)) / 86400000)
   const locale = language === 'zh' ? 'zh-CN' : language
-  if (days <= 0) return `${t('today')} · ${date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}`
+  if (days <= 0)
+    return `${t('today')} · ${date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}`
   if (days === 1) return t('yesterday')
   return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' })
 }

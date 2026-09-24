@@ -70,12 +70,7 @@ export class ControlLink {
     this.send({ type: 'state', ...state })
   }
 
-  reportResult(result: {
-    requestId: string
-    ok: boolean
-    result?: unknown
-    error?: string
-  }): void {
+  reportResult(result: { requestId: string; ok: boolean; result?: unknown; error?: string }): void {
     this.send({ type: 'result', ...result })
   }
 

@@ -345,8 +345,8 @@ export function App() {
   const missingFontsDismissed = useRef(false)
   const refreshMissingFonts = useCallback(() => {
     if (missingFontsDismissed.current) return
-    slidesPlatform().api
-      .fontMissing?.()
+    slidesPlatform()
+      .api.fontMissing?.()
       .then((m) => setMissingFonts(m ?? []))
       .catch(() => {})
   }, [])
@@ -469,9 +469,7 @@ export function App() {
     slideShot?: boolean
   } | null>(null)
   const [_recent, setRecent] = useState<string[]>([])
-  const consumePendingRef = useRef<ReturnType<SlidesApi['consumePendingOpen']> | null>(
-    null,
-  )
+  const consumePendingRef = useRef<ReturnType<SlidesApi['consumePendingOpen']> | null>(null)
   const bootHandledRef = useRef(false)
   const [images, setImages] = useState<Map<string, HTMLImageElement>>(new Map())
   const imageLoaderRef = useRef<ReturnType<typeof createImageLoader> | null>(null)
@@ -649,7 +647,10 @@ export function App() {
     const pending = notesDraftRef.current
     if (!pending) return
     notesDraftRef.current = null
-    const ok = await slidesPlatform().api.setNotes({ slideIndex: pending.index, text: pending.text })
+    const ok = await slidesPlatform().api.setNotes({
+      slideIndex: pending.index,
+      text: pending.text,
+    })
     if (ok) setDirty(true)
   }, [])
 
@@ -853,7 +854,9 @@ export function App() {
           : t('appStatusNewBlank'),
       )
       // Fetch the layout list asynchronously (doesn't block opening)
-      void slidesPlatform().api.getLayouts().then((r) => setLayoutsResult(r))
+      void slidesPlatform()
+        .api.getLayouts()
+        .then((r) => setLayoutsResult(r))
     },
     [fitZoom],
   )
@@ -932,7 +935,9 @@ export function App() {
         setCurrent((c) => Math.min(c, Math.max(0, all.length - 1)))
         // The broadcast also fires for undo back to a clean state — ask the
         // session instead of assuming the change dirtied it
-        void slidesPlatform().api.isDirty?.().then((d) => setDirty(!!d))
+        void slidesPlatform()
+          .api.isDirty?.()
+          .then((d) => setDirty(!!d))
       }),
     [],
   )
@@ -959,13 +964,15 @@ export function App() {
     let saving = false
     const tick = () => {
       if (saving || editing || editingCell || mouseDownRef.current) return
-      void slidesPlatform().api.isDirty().then((d) => {
-        if (!d || saving) return
-        saving = true
-        void save(true).finally(() => {
-          saving = false
+      void slidesPlatform()
+        .api.isDirty()
+        .then((d) => {
+          if (!d || saving) return
+          saving = true
+          void save(true).finally(() => {
+            saving = false
+          })
         })
-      })
     }
     const id = window.setInterval(tick, 30_000)
     window.addEventListener('blur', tick)
@@ -1446,8 +1453,8 @@ export function App() {
         return
       }
       effectsInFlight.current = true
-      void slidesPlatform().api
-        .setEffects({ slideIndex, sourceId: id, effects })
+      void slidesPlatform()
+        .api.setEffects({ slideIndex, sourceId: id, effects })
         .then((r) => r && applySlide(slideIndex, r))
         .finally(() => {
           effectsInFlight.current = false
@@ -1682,9 +1689,11 @@ export function App() {
       return
     }
     let cancelled = false
-    void slidesPlatform().api.getAnimations(current).then((items) => {
-      if (!cancelled) setAnimations(items)
-    })
+    void slidesPlatform()
+      .api.getAnimations(current)
+      .then((items) => {
+        if (!cancelled) setAnimations(items)
+      })
     return () => {
       cancelled = true
     }
@@ -1930,9 +1939,11 @@ export function App() {
       return
     }
     let cancelled = false
-    void slidesPlatform().api.getComments(current).then((c) => {
-      if (!cancelled) setComments(c)
-    })
+    void slidesPlatform()
+      .api.getComments(current)
+      .then((c) => {
+        if (!cancelled) setComments(c)
+      })
     return () => {
       cancelled = true
     }
@@ -2052,9 +2063,11 @@ export function App() {
       return
     }
     let alive = true
-    void slidesPlatform().api.getSections().then((r) => {
-      if (alive) setSections(r ?? [])
-    })
+    void slidesPlatform()
+      .api.getSections()
+      .then((r) => {
+        if (alive) setSections(r ?? [])
+      })
     return () => {
       alive = false
     }
@@ -2524,8 +2537,8 @@ export function App() {
       const now = performance.now()
       if (preview && now - adjustLastSent.current < 80) return
       adjustLastSent.current = now
-      void slidesPlatform().api
-        .setShapeAdjust({
+      void slidesPlatform()
+        .api.setShapeAdjust({
           slideIndex: current,
           sourceId,
           adjust,
@@ -2547,8 +2560,8 @@ export function App() {
   const sendEditPoints = useCallback((commit: EditPointsCommit, preview: boolean) => {
     editPointsPreview.current.note(commit, preview)
     const { slideIndex } = commit
-    void slidesPlatform().api
-      .setShapeGeometry({
+    void slidesPlatform()
+      .api.setShapeGeometry({
         slideIndex,
         sourceId: commit.sourceId,
         pathPx: commit.path,
@@ -2728,9 +2741,11 @@ export function App() {
       return
     }
     let alive = true
-    void slidesPlatform().api.getChartData(current, selectedNode.sourceId).then((d) => {
-      if (alive) setSelectedChartData(d)
-    })
+    void slidesPlatform()
+      .api.getChartData(current, selectedNode.sourceId)
+      .then((d) => {
+        if (alive) setSelectedChartData(d)
+      })
     return () => {
       alive = false
     }
@@ -2815,9 +2830,11 @@ export function App() {
     if (selectedNode?.type !== 'chart') return
     let stale = false
     // Optional call: degrade to the fixed palette when the preload build is too old, no blank screen
-    void slidesPlatform().api.getChartColorSchemes?.().then((r) => {
-      if (!stale && r) setChartColorSchemes(r)
-    })
+    void slidesPlatform()
+      .api.getChartColorSchemes?.()
+      .then((r) => {
+        if (!stale && r) setChartColorSchemes(r)
+      })
     return () => {
       stale = true
     }
@@ -3182,15 +3199,17 @@ export function App() {
         }
         onResetLayout={() => void slideActions.setSlideLayoutAt(ctxRef.current, current)}
         onSlideSize={(cx, cy) =>
-          void slidesPlatform().api.setSlideSize({ cx, cy }).then((all) => {
-            if (all) {
-              setSlides(all)
-              // Every slide re-materializes with fresh element ids
-              setSelectedIds([])
-              setEditing(null)
-              setDirty(true)
-            }
-          })
+          void slidesPlatform()
+            .api.setSlideSize({ cx, cy })
+            .then((all) => {
+              if (all) {
+                setSlides(all)
+                // Every slide re-materializes with fresh element ids
+                setSelectedIds([])
+                setEditing(null)
+                setDirty(true)
+              }
+            })
         }
         slideSizeKey={
           slide
@@ -3297,8 +3316,8 @@ export function App() {
             } else if (n.type === 'group') {
               for (const c of (n as GroupRenderNode).children) {
                 if (c.type === 'picture' || c.type === 'shape')
-                  void slidesPlatform().api
-                    .editStroke({
+                  void slidesPlatform()
+                    .api.editStroke({
                       slideIndex: current,
                       sourceId: c.sourceId,
                       stroke,
@@ -3312,8 +3331,8 @@ export function App() {
         onChangeShape={
           selectedNode?.type === 'shape' && !selectedNode.line
             ? (prst) => {
-                void slidesPlatform().api
-                  .changeShape({
+                void slidesPlatform()
+                  .api.changeShape({
                     slideIndex: current,
                     sourceId: selectedNode.sourceId,
                     prst,
@@ -3426,8 +3445,12 @@ export function App() {
         onPictureRotate={(delta) => void rotateSelected(delta)}
         onPictureOpacity={(opacity) => {
           if (!selectedNode || selectedNode.type !== 'picture') return
-          void slidesPlatform().api
-            .editPictureOpacity({ slideIndex: current, sourceId: selectedNode.sourceId, opacity })
+          void slidesPlatform()
+            .api.editPictureOpacity({
+              slideIndex: current,
+              sourceId: selectedNode.sourceId,
+              opacity,
+            })
             .then((r) => r && applySlide(current, r))
         }}
         onEditTableStyle={(op) => void onEditTableStyle(op)}
@@ -3815,57 +3838,57 @@ export function App() {
                         }
                       >
                         {slidesPlatform().ai && (
-                        <div className="stage-ai-bar">
-                          <div className="stage-ai-group">
-                            <button
-                              className={`stage-ai-btn${showAi ? ' active' : ''}`}
-                              data-tip={t('aiOpenAssistant')}
-                              onClick={toggleAi}
-                            >
-                              <GensparkMark size={14} />
-                              <span>Genspark AI</span>
-                            </button>
-                            {/* Same one-click presets as the Home tab; hidden instead of
+                          <div className="stage-ai-bar">
+                            <div className="stage-ai-group">
+                              <button
+                                className={`stage-ai-btn${showAi ? ' active' : ''}`}
+                                data-tip={t('aiOpenAssistant')}
+                                onClick={toggleAi}
+                              >
+                                <GensparkMark size={14} />
+                                <span>Genspark AI</span>
+                              </button>
+                              {/* Same one-click presets as the Home tab; hidden instead of
                         disabled while the deck has no real content */}
-                            {!deckEmpty && (
-                              <>
-                                <span className="stage-ai-divider" aria-hidden="true" />
-                                <button
-                                  className="stage-ai-btn"
-                                  data-tip={t('aiBeautifyBtn')}
-                                  onClick={() =>
-                                    pushAiPreset(
-                                      t('aiBeautifyPrompt'),
-                                      true,
-                                      undefined,
-                                      undefined,
-                                      true,
-                                    )
-                                  }
-                                >
-                                  <IconAiBeautify size={14} />
-                                  <span>{t('aiBeautifyBtn')}</span>
-                                </button>
-                                <button
-                                  className="stage-ai-btn"
-                                  data-tip={t('aiFactCheckBtn')}
-                                  onClick={() => pushAiPreset(t('aiFactCheckPrompt'))}
-                                >
-                                  <IconAiFactCheck size={14} />
-                                  <span>{t('aiFactCheckBtn')}</span>
-                                </button>
-                                <button
-                                  className="stage-ai-btn"
-                                  data-tip={t('aiImageBtn')}
-                                  onClick={() => pushAiPreset(t('aiImagePrompt'))}
-                                >
-                                  <IconAiImage size={14} />
-                                  <span>{t('aiImageBtn')}</span>
-                                </button>
-                              </>
-                            )}
+                              {!deckEmpty && (
+                                <>
+                                  <span className="stage-ai-divider" aria-hidden="true" />
+                                  <button
+                                    className="stage-ai-btn"
+                                    data-tip={t('aiBeautifyBtn')}
+                                    onClick={() =>
+                                      pushAiPreset(
+                                        t('aiBeautifyPrompt'),
+                                        true,
+                                        undefined,
+                                        undefined,
+                                        true,
+                                      )
+                                    }
+                                  >
+                                    <IconAiBeautify size={14} />
+                                    <span>{t('aiBeautifyBtn')}</span>
+                                  </button>
+                                  <button
+                                    className="stage-ai-btn"
+                                    data-tip={t('aiFactCheckBtn')}
+                                    onClick={() => pushAiPreset(t('aiFactCheckPrompt'))}
+                                  >
+                                    <IconAiFactCheck size={14} />
+                                    <span>{t('aiFactCheckBtn')}</span>
+                                  </button>
+                                  <button
+                                    className="stage-ai-btn"
+                                    data-tip={t('aiImageBtn')}
+                                    onClick={() => pushAiPreset(t('aiImagePrompt'))}
+                                  >
+                                    <IconAiImage size={14} />
+                                    <span>{t('aiImageBtn')}</span>
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </div>
-                        </div>
                         )}
                         <div
                           ref={stageScaleRef}
@@ -4234,8 +4257,8 @@ export function App() {
                     onSizeRequestDone={() => setFormatSizeNonce(0)}
                     onFill={(id, fill) => void onFill(id, fill)}
                     onImageFill={(id) =>
-                      void slidesPlatform().api
-                        .editImageFill({
+                      void slidesPlatform()
+                        .api.editImageFill({
                           slideIndex: current,
                           targets: [{ sourceId: id }],
                           mode: 'stretch',
@@ -4243,13 +4266,13 @@ export function App() {
                         .then((r) => r && applySlide(current, r))
                     }
                     onTextAnchor={(id, anchor) =>
-                      void slidesPlatform().api
-                        .setTextAnchor({ slideIndex: current, sourceId: id, anchor })
+                      void slidesPlatform()
+                        .api.setTextAnchor({ slideIndex: current, sourceId: id, anchor })
                         .then((r) => r && applySlide(current, r))
                     }
                     onTextBodyProps={(id, props) =>
-                      void slidesPlatform().api
-                        .setTextBodyProps({ slideIndex: current, sourceId: id, props })
+                      void slidesPlatform()
+                        .api.setTextBodyProps({ slideIndex: current, sourceId: id, props })
                         .then((r) => r && applySlide(current, r))
                     }
                     onEffects={(id, effects) => sendEffects(current, id, effects)}
@@ -4524,8 +4547,8 @@ export function App() {
           y={shapeGalleryAt.y}
           onPick={(prst) => {
             const { targetId } = shapeGalleryAt
-            void slidesPlatform().api
-              .changeShape({
+            void slidesPlatform()
+              .api.changeShape({
                 slideIndex: current,
                 sourceId: targetId,
                 prst,

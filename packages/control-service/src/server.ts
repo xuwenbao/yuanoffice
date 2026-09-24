@@ -1,10 +1,24 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
-import { createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
+import {
+  createReadStream,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs'
 import { createServer as createHttp, type IncomingMessage, type ServerResponse } from 'node:http'
 import { createServer as createNet, type Server as NetServer } from 'node:net'
 import { basename, extname, join } from 'node:path'
 import { isAbsolute, relative, resolve } from 'node:path'
-import { CONTROL_FILE, CONTROL_PROTOCOL, type ControlReply, type ControlRequest } from '@genoffice/cli/control-protocol'
+import {
+  CONTROL_FILE,
+  CONTROL_PROTOCOL,
+  type ControlReply,
+  type ControlRequest,
+} from '@genoffice/cli/control-protocol'
 import {
   dispatchLiveTool,
   EditorRegistry,
@@ -164,7 +178,8 @@ function onSocket(
         title: typeof message.title === 'string' ? message.title : basename(message.path),
         revision: typeof message.revision === 'number' ? message.revision : 0,
         dirty: message.dirty === true,
-        run: (command, payload) => callEditor(editorId!, command, payload, sockets, shells, pending),
+        run: (command, payload) =>
+          callEditor(editorId!, command, payload, sockets, shells, pending),
       })
       publishNow()
     } else if (message.type === 'state' && typeof message.editorId === 'string') {
@@ -179,7 +194,10 @@ function onSocket(
       pending.delete(message.requestId)
       clearTimeout(entry.timer)
       if (message.ok === true) entry.resolve(message.result)
-      else entry.reject(new Error(typeof message.error === 'string' ? message.error : 'command failed'))
+      else
+        entry.reject(
+          new Error(typeof message.error === 'string' ? message.error : 'command failed'),
+        )
     } else if (message.type === 'unregister' && typeof message.editorId === 'string') {
       registry.unregister(message.editorId, message.dirty === true)
       sockets.delete(message.editorId)
@@ -297,7 +315,10 @@ async function handleHttp(req: IncomingMessage, res: ServerResponse, ctx: HttpCt
     const dir = ctx.allowed.resolve(url.searchParams.get('dir') ?? '')
     const name = url.searchParams.get('name') ?? ''
     if (!name || name !== basename(name) || name === '.' || name === '..') {
-      sendJson(res, 400, { error: 'invalid_argument', message: 'name must be a single path segment' })
+      sendJson(res, 400, {
+        error: 'invalid_argument',
+        message: 'name must be a single path segment',
+      })
       return
     }
     const kind = blankKind(name)
@@ -519,8 +540,12 @@ async function controlCommand(
       tool,
       {
         document: request.doc,
-        ...(request.cmd === 'editor-apply' ? { ops: request.ops, baseRevision: request.baseRevision } : {}),
-        ...(request.cmd === 'editor-save' ? { path: request.path, overwrite: request.overwrite } : {}),
+        ...(request.cmd === 'editor-apply'
+          ? { ops: request.ops, baseRevision: request.baseRevision }
+          : {}),
+        ...(request.cmd === 'editor-save'
+          ? { path: request.path, overwrite: request.overwrite }
+          : {}),
       },
       { save: (session, path, overwrite) => saveEditor(session, path, overwrite, allowed) },
     )

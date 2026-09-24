@@ -1,4 +1,11 @@
-import { mkdirSync, readFileSync, realpathSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
+import {
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -71,7 +78,15 @@ describe('control service', () => {
       headers: { authorization: `Bearer ${service.token}` },
     })
     expect(listed.status).toBe(200)
-    const body = (await listed.json()) as { entries: Array<{ name: string; path: string; kind: string; mtimeMs: number; sizeBytes: number }> }
+    const body = (await listed.json()) as {
+      entries: Array<{
+        name: string
+        path: string
+        kind: string
+        mtimeMs: number
+        sizeBytes: number
+      }>
+    }
     expect(body.entries[0]).toMatchObject({
       name: basename(root),
       path: root,

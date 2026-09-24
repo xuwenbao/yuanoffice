@@ -130,7 +130,11 @@ export async function pasteSlideAfter(
   index: number,
   mode: PasteSlideMode = 'theme',
 ): Promise<void> {
-  const r = await slidesPlatform().api.pasteSlide({ afterIndex: index, fitWidthPx: FIT_WIDTH, mode })
+  const r = await slidesPlatform().api.pasteSlide({
+    afterIndex: index,
+    fitWidthPx: FIT_WIDTH,
+    mode,
+  })
   if (!r) {
     ctx.setStatus(t('appStatusSlidePasteFailed'))
     return
@@ -182,7 +186,10 @@ export async function pasteClipboard(ctx: ActionCtx): Promise<void> {
     }
     return
   }
-  const r = await slidesPlatform().api.pasteElements({ slideIndex: ctx.current, fitWidthPx: FIT_WIDTH })
+  const r = await slidesPlatform().api.pasteElements({
+    slideIndex: ctx.current,
+    fitWidthPx: FIT_WIDTH,
+  })
   if (r) {
     ctx.applySlide(ctx.current, r.slide)
     ctx.setSelectedIds(r.sourceIds)

@@ -148,9 +148,11 @@ export function PresenterView({
   // ── Multi-screen: open the audience window on entry, close on exit ─────────────
   useEffect(() => {
     let disposed = false
-    void slidesPlatform().api.presenterStart().then((r) => {
-      if (!disposed) setHasAudience(r.audience)
-    })
+    void slidesPlatform()
+      .api.presenterStart()
+      .then((r) => {
+        if (!disposed) setHasAudience(r.audience)
+      })
     return () => {
       disposed = true
       void slidesPlatform().api.presenterEnd()

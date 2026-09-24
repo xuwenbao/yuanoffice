@@ -47,9 +47,11 @@ export function ShowMediaLayer({
     setUrls({})
     setPlaying({})
     for (const n of nodes) {
-      void slidesPlatform().api.getMediaData(slideIndex, n.sourceId).then((d) => {
-        if (!cancelled && d) setUrls((u) => ({ ...u, [n.sourceId]: d }))
-      })
+      void slidesPlatform()
+        .api.getMediaData(slideIndex, n.sourceId)
+        .then((d) => {
+          if (!cancelled && d) setUrls((u) => ({ ...u, [n.sourceId]: d }))
+        })
     }
     return () => {
       cancelled = true

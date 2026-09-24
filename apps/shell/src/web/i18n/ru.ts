@@ -10,5 +10,5 @@ export const ru = {
   save: 'Сохранить',
   discard: 'Отменить изменения',
   cancel: 'Закрыть',
-  failed: 'Не удалось прочитать эту папку'
+  failed: 'Не удалось прочитать эту папку',
 } satisfies Record<keyof typeof zh, string>

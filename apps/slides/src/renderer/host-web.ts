@@ -21,7 +21,12 @@ import type { HistorySnapshot, Session } from '../domain/session'
 import type { EditTextOp, EditTransformOp, OpenResult, SlidesApi } from '../shared/ipc'
 import { setSlidesPlatform } from './platform'
 
-const AI_PREFS = { side: 'left' as const, fontSize: 'default' as const, customFontSize: 14, spellcheck: true }
+const AI_PREFS = {
+  side: 'left' as const,
+  fontSize: 'default' as const,
+  customFontSize: 14,
+  spellcheck: true,
+}
 
 /**
  * Browser host for the desktop slides page. The deck is an OpenedPptx held
@@ -33,7 +38,10 @@ export async function installSlidesHost(): Promise<void> {
   const editorId = params.get('editorId') || `slides-${Math.random().toString(36).slice(2, 10)}`
   const queuedPath = params.get('path')
   const files = new ServiceFiles('')
-  const link = new ControlLink(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`, '')
+  const link = new ControlLink(
+    `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`,
+    '',
+  )
   link.start('editor')
   let session: Session | null = null
   let consumed = false
@@ -100,13 +108,17 @@ export async function installSlidesHost(): Promise<void> {
 
   const implemented: Partial<SlidesApi> = {
     async getLanguage() {
-      return (localStorage.getItem('genoffice.language') || 'zh') as Awaited<ReturnType<SlidesApi['getLanguage']>>
+      return (localStorage.getItem('genoffice.language') || 'zh') as Awaited<
+        ReturnType<SlidesApi['getLanguage']>
+      >
     },
     onLanguageChanged() {
       return () => {}
     },
     async getTheme() {
-      return (localStorage.getItem('genoffice.theme') as 'light' | 'dark' | 'system' | null) || 'system'
+      return (
+        (localStorage.getItem('genoffice.theme') as 'light' | 'dark' | 'system' | null) || 'system'
+      )
     },
     onThemeChanged() {
       return () => {}
@@ -282,7 +294,8 @@ export async function installSlidesHost(): Promise<void> {
         if (Reflect.has(target, prop)) return Reflect.get(target, prop, receiver)
         const name = String(prop)
         if (name.startsWith('on')) return () => () => {}
-        if (name.startsWith('set') || name.startsWith('report') || name.startsWith('headless')) return () => {}
+        if (name.startsWith('set') || name.startsWith('report') || name.startsWith('headless'))
+          return () => {}
         return async () => {
           throw new Error(`slides web host has no ${name}`)
         }

@@ -7,7 +7,13 @@ interface Reactor {
 let reactor: Reactor | null = null
 
 self.onmessage = (event: MessageEvent) => {
-  const message = event.data as { type: string; requestId: number; wasm?: ArrayBuffer; book?: Uint8Array; line?: string }
+  const message = event.data as {
+    type: string
+    requestId: number
+    wasm?: ArrayBuffer
+    book?: Uint8Array
+    line?: string
+  }
   if (message.type === 'open') {
     void openBook(message.requestId, message.wasm!, message.book!)
     return
@@ -63,7 +69,8 @@ function bindReactor(exports: Record<string, unknown>): Reactor {
   const alloc = exports.xlsx_alloc as ((size: number) => number) | undefined
   const dispatch = exports.xlsx_dispatch as ((ptr: number) => number) | undefined
   const free = exports.xlsx_free as ((ptr: number) => void) | undefined
-  if (!memory || !alloc || !dispatch || !free) throw new Error('xlsx wasm is missing the reactor exports')
+  if (!memory || !alloc || !dispatch || !free)
+    throw new Error('xlsx wasm is missing the reactor exports')
   return {
     dispatch(line: string) {
       const encoded = new TextEncoder().encode(`${line}\0`)

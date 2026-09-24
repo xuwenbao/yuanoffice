@@ -10,5 +10,5 @@ export const ms = {
   save: 'Simpan',
   discard: 'Buang',
   cancel: 'Batal',
-  failed: 'Folder ini tidak dapat dibaca'
+  failed: 'Folder ini tidak dapat dibaca',
 } satisfies Record<keyof typeof zh, string>

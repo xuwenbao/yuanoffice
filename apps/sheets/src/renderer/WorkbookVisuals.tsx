@@ -1601,8 +1601,8 @@ function useWorkbookMediaUrl(
   useEffect(() => {
     if (sessionId === undefined) return
     let isCurrent = true
-    void sheetsPlatform().api
-      .readWorkbookMedia({ sessionId, visualId })
+    void sheetsPlatform()
+      .api.readWorkbookMedia({ sessionId, visualId })
       .then(async (media) => {
         const next = isMetafileMime(media.mediaType)
           ? await metafileToDataUrl(base64ToBytes(media.base64), media.mediaType)

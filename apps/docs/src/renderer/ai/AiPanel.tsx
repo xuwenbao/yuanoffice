@@ -398,8 +398,8 @@ export function AiPanel({
     for (const a of wanted) {
       if (!ATTACHMENT_IMAGE_EXTS.has(a.ext) || previewRequestedRef.current.has(a.path)) continue
       previewRequestedRef.current.add(a.path)
-      void docsPlatform().api
-        .readAttachmentImage(a.path)
+      void docsPlatform()
+        .api.readAttachmentImage(a.path)
         .then((r) => {
           if (!previewRequestedRef.current.has(a.path)) return // removed while the read was in flight
           if (r.ok && r.base64 && r.mime) {
@@ -480,8 +480,8 @@ export function AiPanel({
     let alive = true
     const refresh = () => {
       // tests render the panel without a preload bridge
-      void docsPlatform().api
-        ?.aiGskStatus?.()
+      void docsPlatform()
+        .api?.aiGskStatus?.()
         .then((s) => {
           if (alive) gskLoggedInRef.current = !!s?.loggedIn
         })
@@ -865,8 +865,8 @@ export function AiPanel({
           })
           // Signed-out failures get an inline sign-in button; detected via
           // gsk status rather than matching the localized error text
-          void docsPlatform().api
-            .aiGskStatus()
+          void docsPlatform()
+            .api.aiGskStatus()
             .then((status) => {
               if (status.loggedIn) return
               setChat((prev) => {
@@ -1409,7 +1409,10 @@ export function AiPanel({
                 <div className="ai-msg-error">{t('aiErrorPrefix', { error: entry.error })}</div>
               )}
               {entry.loginRequired && (
-                <button className="ai-login-btn" onClick={() => void docsPlatform().api.aiGskLogin()}>
+                <button
+                  className="ai-login-btn"
+                  onClick={() => void docsPlatform().api.aiGskLogin()}
+                >
                   {t('aiGskLoginBtn')}
                 </button>
               )}

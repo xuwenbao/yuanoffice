@@ -13,9 +13,14 @@ export const editorCommand: CommandDef = {
   name: 'editor',
   summary:
     'Read or edit the document open in the browser editor. apply does not write the file; save does.',
-  usage: 'editor list | editor read|apply|status|save --doc <id|path> [--ops <file>] [--path <file>] [--overwrite]',
+  usage:
+    'editor list | editor read|apply|status|save --doc <id|path> [--ops <file>] [--path <file>] [--overwrite]',
   options: [
-    { name: 'doc', value: 'id|path', description: 'editor id or absolute path of the open document' },
+    {
+      name: 'doc',
+      value: 'id|path',
+      description: 'editor id or absolute path of the open document',
+    },
     { name: 'ops', value: 'file', description: 'JSON ops for editor apply' },
     { name: 'path', value: 'file', description: 'editor save: write a copy to this path' },
     { name: 'overwrite', description: 'editor save: replace an existing copy' },

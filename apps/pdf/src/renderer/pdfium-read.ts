@@ -18,14 +18,20 @@ async function loadBrowserPdfium(): Promise<Pdfium> {
 }
 
 function utf16(bytes: Uint8Array): string {
-  return new TextDecoder('utf-16le').decode(bytes).replace(/\0+$/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  return new TextDecoder('utf-16le')
+    .decode(bytes)
+    .replace(/\0+$/, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
 }
 
 /**
  * Read PDF text with pdfium wasm. The desktop main process uses the same
  * library; this copy does not touch the file.
  */
-export async function readPdfiumText(bytes: Uint8Array): Promise<{ pageCount: number; text: string }> {
+export async function readPdfiumText(
+  bytes: Uint8Array,
+): Promise<{ pageCount: number; text: string }> {
   const pdfium = await loadBrowserPdfium()
   const size = bytes.byteLength
   const ptr = pdfium._malloc(size)

@@ -10,7 +10,10 @@ const RETRYABLE = new Set(['EPERM', 'EACCES', 'EBUSY'])
  * document the editor is saving.
  */
 export async function atomicWriteFile(filePath: string, data: Uint8Array): Promise<void> {
-  const tmp = join(dirname(filePath), `.${basename(filePath)}.${randomBytes(6).toString('hex')}.tmp`)
+  const tmp = join(
+    dirname(filePath),
+    `.${basename(filePath)}.${randomBytes(6).toString('hex')}.tmp`,
+  )
   try {
     await writeFile(tmp, data)
     for (let attempt = 0; ; attempt++) {

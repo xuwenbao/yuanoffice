@@ -10,5 +10,5 @@ export const he = {
   save: 'שמור',
   discard: 'בטל שינויים',
   cancel: 'חזור',
-  failed: 'לא ניתן לקרוא את התיקייה הזו'
+  failed: 'לא ניתן לקרוא את התיקייה הזו',
 } satisfies Record<keyof typeof zh, string>

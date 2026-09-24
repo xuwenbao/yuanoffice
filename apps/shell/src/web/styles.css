@@ -5,7 +5,11 @@ body,
   height: 100%;
   background: var(--surface);
   color: var(--text);
-  font: 14px/1.4 -apple-system, 'PingFang SC', 'Segoe UI', sans-serif;
+  font:
+    14px/1.4 -apple-system,
+    'PingFang SC',
+    'Segoe UI',
+    sans-serif;
 }
 
 .app {

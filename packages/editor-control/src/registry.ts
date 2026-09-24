@@ -41,7 +41,9 @@ export class EditorRegistry {
 
   update(
     editorId: string,
-    patch: Partial<Pick<EditorSession, 'revision' | 'dirty' | 'title' | 'savedRevision' | 'lastSavedAt'>>,
+    patch: Partial<
+      Pick<EditorSession, 'revision' | 'dirty' | 'title' | 'savedRevision' | 'lastSavedAt'>
+    >,
   ): void {
     const session = this.sessions.get(editorId)
     if (!session) return
@@ -103,7 +105,11 @@ export class EditorRegistry {
         byTitle.map((session) => session.editorId),
       )
     }
-    throw new LiveError('file_not_found', `no open editor matches ${target}`, this.list().map((s) => s.editorId))
+    throw new LiveError(
+      'file_not_found',
+      `no open editor matches ${target}`,
+      this.list().map((s) => s.editorId),
+    )
   }
 }
 

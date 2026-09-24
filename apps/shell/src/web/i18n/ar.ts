@@ -10,5 +10,5 @@ export const ar = {
   save: 'حفظ',
   discard: 'تجاهل',
   cancel: 'إلغاء',
-  failed: 'تعذر قراءة هذا المجلد'
+  failed: 'تعذر قراءة هذا المجلد',
 } satisfies Record<keyof typeof zh, string>

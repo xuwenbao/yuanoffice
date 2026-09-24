@@ -13,7 +13,11 @@ export const serveCommand: CommandDef = {
     'Serve the browser editors and the live MCP/CLI bridge on loopback. Does not call a model.',
   usage: 'serve --root <dir> [--port <n>] [--static <dir>]',
   options: [
-    { name: 'root', value: 'dir', description: 'directory the file API may read and write; path-delimiter separates several' },
+    {
+      name: 'root',
+      value: 'dir',
+      description: 'directory the file API may read and write; path-delimiter separates several',
+    },
     { name: 'port', value: 'n', description: 'loopback port (default 8787)' },
     { name: 'static', value: 'dir', description: 'directory of the built web shell (dist/web)' },
   ],

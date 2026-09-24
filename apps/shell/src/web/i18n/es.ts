@@ -10,5 +10,5 @@ export const es = {
   save: 'Guardar',
   discard: 'Descartar',
   cancel: 'Cancelar',
-  failed: 'No se pudo leer esta carpeta'
+  failed: 'No se pudo leer esta carpeta',
 } satisfies Record<keyof typeof zh, string>

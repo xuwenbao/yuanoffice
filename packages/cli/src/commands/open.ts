@@ -44,7 +44,11 @@ export const openCommand: CommandDef = {
     if (!endpoint) {
       const web = controlEndpoint(ctx.env, 'web')
       if (web) {
-        const result = await controlRequest(web, { cmd: 'open', path, ...(target ? { target } : {}) })
+        const result = await controlRequest(web, {
+          cmd: 'open',
+          path,
+          ...(target ? { target } : {}),
+        })
         return { summary: `opening ${path} in the browser`, detail: result }
       }
       const launch = await spawnApp(path, ctx)

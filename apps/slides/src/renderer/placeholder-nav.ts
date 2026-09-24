@@ -54,7 +54,10 @@ export async function nextPlaceholder(
     ctx.setEditing({ sourceId: next })
     return
   }
-  const r = await slidesPlatform().api.addBlankSlide({ sourceIndex: current, fitWidthPx: FIT_WIDTH })
+  const r = await slidesPlatform().api.addBlankSlide({
+    sourceIndex: current,
+    fitWidthPx: FIT_WIDTH,
+  })
   if (!r) {
     ctx.setEditing(null)
     ctx.setSelectedIds([editing.sourceId])

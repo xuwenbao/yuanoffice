@@ -204,7 +204,8 @@ export async function exportPdf(ctx: ActionCtx, outPath?: string): Promise<boole
     ctx.setStatus(t('appExportNoSlides'))
     return false
   }
-  const target = outPath ?? (await slidesPlatform().api.pickExportPdfPath(`${exportBaseName(ctx)}.pdf`))
+  const target =
+    outPath ?? (await slidesPlatform().api.pickExportPdfPath(`${exportBaseName(ctx)}.pdf`))
   if (!target) return false
   ctx.setStatus(t('appExportPdfProgress'))
   try {

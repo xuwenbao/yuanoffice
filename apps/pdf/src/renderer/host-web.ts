@@ -9,7 +9,12 @@ import type { SavePdfRequest, SavePdfResult } from '../shared/ipc'
 import { setPdfPlatform } from './platform'
 import type { PdfApi } from '../shared/ipc'
 
-const AI_PREFS = { side: 'left' as const, fontSize: 'default' as const, customFontSize: 14, spellcheck: true }
+const AI_PREFS = {
+  side: 'left' as const,
+  fontSize: 'default' as const,
+  customFontSize: 14,
+  spellcheck: true,
+}
 
 /**
  * Browser host for the desktop PDF page. Bytes move through the control
@@ -26,7 +31,10 @@ export async function installPdfHost(): Promise<void> {
   let fileBytes: Uint8Array | null = null
   let dirty = false
   const files = new ServiceFiles('')
-  const link = new ControlLink(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`, '')
+  const link = new ControlLink(
+    `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`,
+    '',
+  )
   link.start('editor')
   const titleOf = (path: string) => path.split(/[/\\]/).pop() || path
   const publish = () => {
@@ -118,13 +126,17 @@ export async function installPdfHost(): Promise<void> {
       return { loggedIn: false }
     },
     async getLanguage() {
-      return (localStorage.getItem('genoffice.language') || 'zh') as Awaited<ReturnType<PdfApi['getLanguage']>>
+      return (localStorage.getItem('genoffice.language') || 'zh') as Awaited<
+        ReturnType<PdfApi['getLanguage']>
+      >
     },
     onLanguageChanged() {
       return () => {}
     },
     async getTheme() {
-      return (localStorage.getItem('genoffice.theme') as 'light' | 'dark' | 'system' | null) || 'system'
+      return (
+        (localStorage.getItem('genoffice.theme') as 'light' | 'dark' | 'system' | null) || 'system'
+      )
     },
     onThemeChanged() {
       return () => {}
@@ -180,19 +192,19 @@ export async function installPdfHost(): Promise<void> {
 function hasEdits(request: SavePdfRequest): boolean {
   return Boolean(
     request.markups.length ||
-      request.annotDeletes?.length ||
-      request.drawings.length ||
-      request.noteEdits?.length ||
-      request.formValues.length ||
-      request.stamps.length ||
-      request.textEdits?.length ||
-      request.textInserts?.length ||
-      request.imageEdits?.length ||
-      request.redactions?.length ||
-      request.staticFormFills?.length ||
-      request.rotations?.length ||
-      request.deletedPages?.length ||
-      request.pageOrder?.length ||
-      request.metadata,
+    request.annotDeletes?.length ||
+    request.drawings.length ||
+    request.noteEdits?.length ||
+    request.formValues.length ||
+    request.stamps.length ||
+    request.textEdits?.length ||
+    request.textInserts?.length ||
+    request.imageEdits?.length ||
+    request.redactions?.length ||
+    request.staticFormFills?.length ||
+    request.rotations?.length ||
+    request.deletedPages?.length ||
+    request.pageOrder?.length ||
+    request.metadata,
   )
 }

@@ -10,5 +10,5 @@ export const zhTW = {
   save: '儲存',
   discard: '放棄',
   cancel: '取消',
-  failed: '無法讀取這個目錄'
+  failed: '無法讀取這個目錄',
 } satisfies Record<keyof typeof zh, string>

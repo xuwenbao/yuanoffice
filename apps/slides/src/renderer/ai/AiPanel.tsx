@@ -504,8 +504,8 @@ export function AiPanel({
   useEffect(() => {
     let alive = true
     const refresh = () => {
-      void slidesPlatform().api
-        ?.aiGskStatus()
+      void slidesPlatform()
+        .api?.aiGskStatus()
         .then((s) => {
           if (alive) gskLoggedInRef.current = !!s?.loggedIn
         })
@@ -662,8 +662,8 @@ export function AiPanel({
    * it there would feed it straight back on the next reopen.
    */
   const logRunFailure = (kind: 'error' | 'stopped', error?: string) => {
-    void slidesPlatform().api
-      .aiLogRunFailure({
+    void slidesPlatform()
+      .api.aiLogRunFailure({
         kind,
         instruction: instructionRef.current,
         streamed: streamedTextRef.current,
@@ -858,8 +858,8 @@ export function AiPanel({
         })
         signal?.addEventListener('abort', onAbort, { once: true })
         // If invoke itself rejects (IPC-layer failure), fail immediately instead of waiting out the timeout
-        slidesPlatform().api
-          .aiStream({
+        slidesPlatform()
+          .api.aiStream({
             requestId,
             settings,
             system,
@@ -1460,8 +1460,8 @@ export function AiPanel({
           })
           // Signed-out failures get an inline sign-in button; detected via
           // gsk status rather than matching the localized error text
-          void slidesPlatform().api
-            .aiGskStatus()
+          void slidesPlatform()
+            .api.aiGskStatus()
             .then((status) => {
               if (status.loggedIn) return
               setChat((prev) => {
@@ -2181,7 +2181,10 @@ export function AiPanel({
                 <div className="ai-msg-error">{t('aiMsgError', { error: entry.error })}</div>
               )}
               {entry.loginRequired && (
-                <button className="ai-login-btn" onClick={() => void slidesPlatform().api.aiGskLogin()}>
+                <button
+                  className="ai-login-btn"
+                  onClick={() => void slidesPlatform().api.aiGskLogin()}
+                >
                   {t('aiGskLoginBtn')}
                 </button>
               )}

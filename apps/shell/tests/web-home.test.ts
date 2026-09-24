@@ -9,7 +9,9 @@ describe('web home library', () => {
 
   it('keeps a star when the file is opened again', () => {
     const starred = toggleStar(remember([], '/a.docx', 1), '/a.docx', 1)
-    expect(remember(starred, '/a.docx', 5)).toEqual([{ path: '/a.docx', openedAt: 5, starred: true }])
+    expect(remember(starred, '/a.docx', 5)).toEqual([
+      { path: '/a.docx', openedAt: 5, starred: true },
+    ])
   })
 
   it('filters by extension family and by name or folder', () => {

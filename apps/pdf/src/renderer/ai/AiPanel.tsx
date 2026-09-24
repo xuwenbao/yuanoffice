@@ -256,8 +256,8 @@ export function AiPanel({
   useEffect(() => {
     let alive = true
     const refresh = () => {
-      void pdfPlatform().api
-        ?.gskStatus()
+      void pdfPlatform()
+        .api?.gskStatus()
         .then((s) => {
           if (alive) gskLoggedInRef.current = !!s?.loggedIn
         })

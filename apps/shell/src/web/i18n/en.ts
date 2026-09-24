@@ -10,5 +10,5 @@ export const en = {
   save: 'Save',
   discard: 'Discard',
   cancel: 'Cancel',
-  failed: 'Could not read this folder'
+  failed: 'Could not read this folder',
 } satisfies Record<keyof typeof zh, string>

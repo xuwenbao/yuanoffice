@@ -24,7 +24,9 @@ export interface DocsPlatform {
   agentControl: AgentControlPort | null
   file: DocsFilePort
   /** Browser host can hand bytes to the user without adopting a path. Desktop writes real files. */
-  download: ((name: string, data: ArrayBuffer) => Promise<{ ok: boolean; name?: string; error?: string }>) | null
+  download:
+    | ((name: string, data: ArrayBuffer) => Promise<{ ok: boolean; name?: string; error?: string }>)
+    | null
 }
 
 const slot = createPlatformSlot<DocsPlatform>('docs')

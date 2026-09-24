@@ -379,7 +379,9 @@ export default function App() {
   /** OS account name; the default author of new note comments */
   const [noteAuthor, setNoteAuthor] = useState('')
   useEffect(() => {
-    pdfPlatform().api.getUsername().then(setNoteAuthor, () => {})
+    pdfPlatform()
+      .api.getUsername()
+      .then(setNoteAuthor, () => {})
   }, [])
   const [highlightColor, setHighlightColor] = useState<[number, number, number]>(
     MARKUP_COLORS.highlight,
@@ -657,8 +659,8 @@ export default function App() {
   /** Edit-font ids available on this machine (loaded once; empty until then) */
   const [editFonts, setEditFonts] = useState<string[]>([])
   useEffect(() => {
-    pdfPlatform().api
-      .listEditFonts()
+    pdfPlatform()
+      .api.listEditFonts()
       .then(setEditFonts)
       .catch(() => {
         /* dropdown simply stays at "original font" */
@@ -1666,8 +1668,8 @@ export default function App() {
       return
     }
     let cancelled = false
-    pdfPlatform().api
-      .listPageImages(filePath)
+    pdfPlatform()
+      .api.listPageImages(filePath)
       .then((refs) => {
         if (!cancelled) setPageImages(refs)
       })
@@ -2622,8 +2624,8 @@ export default function App() {
         newText: oldText,
         fontSize: block.fontSize,
       }
-      void pdfPlatform().api
-        .validateTextEdits({ path: filePath, edits: [probe] })
+      void pdfPlatform()
+        .api.validateTextEdits({ path: filePath, edits: [probe] })
         .then(([v]) => {
           if (!v) return
           if (v.reason) {
@@ -2832,8 +2834,8 @@ export default function App() {
         newText: oldText,
         fontSize,
       }
-      void pdfPlatform().api
-        .validateTextEdits({ path: filePath, edits: [probe] })
+      void pdfPlatform()
+        .api.validateTextEdits({ path: filePath, edits: [probe] })
         .then(([v]) => {
           if (!v) return
           if (v.reason) {
@@ -3118,8 +3120,8 @@ export default function App() {
       dropping it immediately with a notice beats a save that silently skips it later. */
   const validateTextEdit = (edit: LocalTextEdit) => {
     if (!filePath) return
-    void pdfPlatform().api
-      .validateTextEdits({ path: filePath, edits: [edit.input] })
+    void pdfPlatform()
+      .api.validateTextEdits({ path: filePath, edits: [edit.input] })
       .then(([v]) => {
         // Stale result: the edit may have been saved or deleted while validation ran
         if (!v || !textEditsRef.current.some((e) => e.id === edit.id)) return
@@ -3452,7 +3454,10 @@ export default function App() {
     inFlightPageMapRef.current = snapshot.pageMap
     const run = (async (): Promise<boolean> => {
       setSaveState('saving')
-      const result = await pdfPlatform().api.save({ path: filePath, ...editsPayload(edits, noteFlush) })
+      const result = await pdfPlatform().api.save({
+        path: filePath,
+        ...editsPayload(edits, noteFlush),
+      })
       if (!result.ok) {
         opFailed(result.error)
         return false
@@ -3668,8 +3673,8 @@ export default function App() {
     redactionApplyConfirmedRef.current = true
     redactionRequestInFlightRef.current = true
     setRedactionCopyInFlight(true)
-    void pdfPlatform().api
-      .requestRedactionCopy(filePath)
+    void pdfPlatform()
+      .api.requestRedactionCopy(filePath)
       .catch((err: unknown) => opFailed(err instanceof Error ? err.message : String(err)))
       .finally(() => {
         redactionRequestInFlightRef.current = false
@@ -3681,7 +3686,10 @@ export default function App() {
   // Autosave pauses while the shell's Save As flow is open: the save dialog blurs the
   // window, and the blur-triggered autosave would write the pending edits into the original
   const saveAsFlowRef = useRef(false)
-  useEffect(() => pdfPlatform().api.onSaveAsFlow((inFlight) => (saveAsFlowRef.current = inFlight)), [])
+  useEffect(
+    () => pdfPlatform().api.onSaveAsFlow((inFlight) => (saveAsFlowRef.current = inFlight)),
+    [],
+  )
 
   // Autosave (same strategy as Docs): every 30s and on window blur, silently persist pending
   // edits via the regular save() path; skipped while a save is in flight or without a file path.
@@ -3904,7 +3912,9 @@ export default function App() {
       // proves nothing about save: gate on an embeddable face NOW, keeping the dialog
       // open, instead of failing at save time ("could not be saved" long after typing).
       // An IPC error must not block inserting — the save path re-checks anyway.
-      const drawable = await pdfPlatform().api.canDrawText(text).catch(() => true)
+      const drawable = await pdfPlatform()
+        .api.canDrawText(text)
+        .catch(() => true)
       if (!drawable) {
         showNotice(t('textInsertNoFont'))
         return
@@ -4090,8 +4100,8 @@ export default function App() {
     if (existingPngFetches.current.has(key)) return
     existingPngFetches.current.add(key)
     const epoch = existingPngEpoch.current
-    void pdfPlatform().api
-      .pageImagePng({ path: filePath, pageIndex: ref.pageIndex, rect: ref.rect })
+    void pdfPlatform()
+      .api.pageImagePng({ path: filePath, pageIndex: ref.pageIndex, rect: ref.rect })
       .then((png) => {
         if (existingPngEpoch.current !== epoch) return
         if (png) setExistingPngs((prev) => new Map(prev).set(key, png))
@@ -4173,8 +4183,8 @@ export default function App() {
       },
     ])
     if (cached || plan.failures.length > 0) return
-    void pdfPlatform().api
-      .pageImagePng({ path: filePath, pageIndex: ref.pageIndex, rect: ref.rect })
+    void pdfPlatform()
+      .api.pageImagePng({ path: filePath, pageIndex: ref.pageIndex, rect: ref.rect })
       .then((png) => {
         if (png) setImageEdits((prev) => prev.map((e) => (e.id === id ? { ...e, png } : e)))
       })
@@ -4309,8 +4319,8 @@ export default function App() {
   /** The target's pixels in displayed orientation (pending quarter turns baked in) */
   const bakeSourcePng = async (target: ImageBakeTarget): Promise<string | null> => {
     const fetchPng = (pageIndex: number, rect: [number, number, number, number]) =>
-      pdfPlatform().api
-        .pageImagePng({ path: filePath, pageIndex, rect, scale: BAKE_SCALE })
+      pdfPlatform()
+        .api.pageImagePng({ path: filePath, pageIndex, rect, scale: BAKE_SCALE })
         .catch(() => null)
     if (target.kind === 'existing') return fetchPng(target.ref.pageIndex, target.ref.rect)
     const input = target.before
@@ -4725,8 +4735,8 @@ export default function App() {
       const key = `${job.rects.map(imageRectKey).join(';')}|${annotKey}|${textKey}|${clipKey}|${pxWidth}|${rotIdx}`
       if (livePreviewKeys.current.get(pageIndex) === key) continue
       livePreviewKeys.current.set(pageIndex, key)
-      void pdfPlatform().api
-        .pagePreviewPng({
+      void pdfPlatform()
+        .api.pagePreviewPng({
           path: filePath,
           pageIndex,
           excludeRects: job.rects,
@@ -5053,7 +5063,10 @@ export default function App() {
 
   const insertPdf = (afterOrigIdx: number) =>
     flushThen(async () => {
-      const result = await pdfPlatform().api.insertPdf({ path: filePath, afterPageIndex: afterOrigIdx })
+      const result = await pdfPlatform().api.insertPdf({
+        path: filePath,
+        afterPageIndex: afterOrigIdx,
+      })
       if (!result.ok) {
         opFailed(result.error)
         return
@@ -5448,7 +5461,10 @@ export default function App() {
       // rejection now instead of at save
       if (filePath && !(plan.kind === 'shift' && isBlockEditOf(te, block))) {
         try {
-          const [v] = await pdfPlatform().api.validateTextEdits({ path: filePath, edits: [te.input] })
+          const [v] = await pdfPlatform().api.validateTextEdits({
+            path: filePath,
+            edits: [te.input],
+          })
           if (v?.reason) return { reason: v.reason }
           if (v?.bounds) te = { ...te, cover: v.bounds }
         } catch {
@@ -6228,56 +6244,56 @@ export default function App() {
           {ribbonTab === 'home' && (
             <>
               {pdfPlatform().ai && (
-              <>
-              {/* ---- Genspark AI (first slot: entry + one-click AI actions, docs parity) ---- */}
-              <div className="ribbon-group">
-                <div className="ribbon-group-items">
-                  <button
-                    className={`rb-big ai-entry${aiCollapsed ? '' : ' active'}`}
-                    data-tip={t('aiOpenAssistant')}
-                    onClick={() => setAiCollapsed((v) => !v)}
-                  >
-                    <span className="rb-big-icon">
-                      <GensparkMark size={26} />
-                    </span>
-                    <span>Genspark AI</span>
-                  </button>
-                  <button
-                    className="rb-big ai-entry"
-                    data-tip={t('aiSummarizeBtn')}
-                    onClick={() =>
-                      runAiPreset(
-                        t(aiSelection ? 'aiQuickSummarySelPrompt' : 'aiQuickSummaryPrompt'),
-                      )
-                    }
-                  >
-                    <span className="rb-big-icon">
-                      <span className="ai-feature-icon" aria-hidden="true">
-                        <IconAiSummarize />
-                      </span>
-                    </span>
-                    <span>{t('aiSummarizeBtn')}</span>
-                  </button>
-                  <button
-                    className="rb-big ai-entry"
-                    data-tip={t('aiKeyPointsBtn')}
-                    onClick={() =>
-                      runAiPreset(
-                        t(aiSelection ? 'aiQuickKeyPointsSelPrompt' : 'aiQuickKeyPointsPrompt'),
-                      )
-                    }
-                  >
-                    <span className="rb-big-icon">
-                      <span className="ai-feature-icon" aria-hidden="true">
-                        <IconAiKeyPoints />
-                      </span>
-                    </span>
-                    <span>{t('aiKeyPointsBtn')}</span>
-                  </button>
-                </div>
-              </div>
-              <div className="ribbon-sep" />
-              </>
+                <>
+                  {/* ---- Genspark AI (first slot: entry + one-click AI actions, docs parity) ---- */}
+                  <div className="ribbon-group">
+                    <div className="ribbon-group-items">
+                      <button
+                        className={`rb-big ai-entry${aiCollapsed ? '' : ' active'}`}
+                        data-tip={t('aiOpenAssistant')}
+                        onClick={() => setAiCollapsed((v) => !v)}
+                      >
+                        <span className="rb-big-icon">
+                          <GensparkMark size={26} />
+                        </span>
+                        <span>Genspark AI</span>
+                      </button>
+                      <button
+                        className="rb-big ai-entry"
+                        data-tip={t('aiSummarizeBtn')}
+                        onClick={() =>
+                          runAiPreset(
+                            t(aiSelection ? 'aiQuickSummarySelPrompt' : 'aiQuickSummaryPrompt'),
+                          )
+                        }
+                      >
+                        <span className="rb-big-icon">
+                          <span className="ai-feature-icon" aria-hidden="true">
+                            <IconAiSummarize />
+                          </span>
+                        </span>
+                        <span>{t('aiSummarizeBtn')}</span>
+                      </button>
+                      <button
+                        className="rb-big ai-entry"
+                        data-tip={t('aiKeyPointsBtn')}
+                        onClick={() =>
+                          runAiPreset(
+                            t(aiSelection ? 'aiQuickKeyPointsSelPrompt' : 'aiQuickKeyPointsPrompt'),
+                          )
+                        }
+                      >
+                        <span className="rb-big-icon">
+                          <span className="ai-feature-icon" aria-hidden="true">
+                            <IconAiKeyPoints />
+                          </span>
+                        </span>
+                        <span>{t('aiKeyPointsBtn')}</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="ribbon-sep" />
+                </>
               )}
               {markupGroup}
               <div className="ribbon-sep" />
@@ -6361,38 +6377,38 @@ export default function App() {
           {ribbonTab === 'annotate' && (
             <>
               {pdfPlatform().ai && (
-              <>
-              <div className="ribbon-group">
-                <div className="ribbon-group-items">
-                  <button
-                    className="rb-big ai-entry"
-                    data-tip={t('aiReviewSummaryBtn')}
-                    onClick={() => runAiPreset(t('aiReviewSummaryPrompt'))}
-                  >
-                    <span className="rb-big-icon">
-                      <span className="ai-feature-icon" aria-hidden="true">
-                        <IconAiSummarize />
-                      </span>
-                    </span>
-                    <span>{t('aiReviewSummaryBtn')}</span>
-                  </button>
-                  <button
-                    className="rb-big ai-entry"
-                    disabled={readOnly}
-                    data-tip={t('aiProcessNotesBtn')}
-                    onClick={() => runAiPreset(t('aiProcessNotesPrompt'))}
-                  >
-                    <span className="rb-big-icon">
-                      <span className="ai-feature-icon" aria-hidden="true">
-                        <GensparkMark size={20} />
-                      </span>
-                    </span>
-                    <span>{t('aiProcessNotesBtn')}</span>
-                  </button>
-                </div>
-              </div>
-              <div className="ribbon-sep" />
-              </>
+                <>
+                  <div className="ribbon-group">
+                    <div className="ribbon-group-items">
+                      <button
+                        className="rb-big ai-entry"
+                        data-tip={t('aiReviewSummaryBtn')}
+                        onClick={() => runAiPreset(t('aiReviewSummaryPrompt'))}
+                      >
+                        <span className="rb-big-icon">
+                          <span className="ai-feature-icon" aria-hidden="true">
+                            <IconAiSummarize />
+                          </span>
+                        </span>
+                        <span>{t('aiReviewSummaryBtn')}</span>
+                      </button>
+                      <button
+                        className="rb-big ai-entry"
+                        disabled={readOnly}
+                        data-tip={t('aiProcessNotesBtn')}
+                        onClick={() => runAiPreset(t('aiProcessNotesPrompt'))}
+                      >
+                        <span className="rb-big-icon">
+                          <span className="ai-feature-icon" aria-hidden="true">
+                            <GensparkMark size={20} />
+                          </span>
+                        </span>
+                        <span>{t('aiProcessNotesBtn')}</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="ribbon-sep" />
+                </>
               )}
               {markupGroup}
               <div className="ribbon-sep" />
@@ -6560,19 +6576,19 @@ export default function App() {
               <div className="ribbon-group">
                 <div className="ribbon-group-items">
                   {pdfPlatform().ai && (
-                  <button
-                    className="rb-big ai-entry"
-                    disabled={readOnly}
-                    data-tip={t('aiFillFormBtn')}
-                    onClick={() => runAiPreset(t('aiFillFormPrompt'))}
-                  >
-                    <span className="rb-big-icon">
-                      <span className="ai-feature-icon" aria-hidden="true">
-                        <GensparkMark size={20} />
+                    <button
+                      className="rb-big ai-entry"
+                      disabled={readOnly}
+                      data-tip={t('aiFillFormBtn')}
+                      onClick={() => runAiPreset(t('aiFillFormPrompt'))}
+                    >
+                      <span className="rb-big-icon">
+                        <span className="ai-feature-icon" aria-hidden="true">
+                          <GensparkMark size={20} />
+                        </span>
                       </span>
-                    </span>
-                    <span>{t('aiFillFormBtn')}</span>
-                  </button>
+                      <span>{t('aiFillFormBtn')}</span>
+                    </button>
                   )}
                   <button
                     className={`rb-big${pendingStaticFill === 'text' ? ' active' : ''}`}
@@ -6895,26 +6911,26 @@ export default function App() {
         {/* dock wrapper animates the width between panel and rail (docs-style 180ms ease);
             the panel stays mounted while collapsed so the chat history survives */}
         {pdfPlatform().ai && (
-        <div className={`ai-dock${aiCollapsed ? ' collapsed' : ''}`}>
-          {aiCollapsed && (
-            <button
-              className="ai-rail"
-              data-tip={t('aiOpenAssistant')}
-              aria-label={t('aiOpenAssistant')}
-              onClick={() => setAiCollapsed(false)}
-            >
-              <GensparkMark size={22} />
-            </button>
-          )}
-          <AiPanel
-            api={aiApi}
-            filePath={filePath}
-            preset={aiPreset}
-            onCollapse={() => setAiCollapsed(true)}
-            onRunDone={() => void autoSaveAfterAiRun()}
-            onClearSelection={() => setAiSelection(null)}
-          />
-        </div>
+          <div className={`ai-dock${aiCollapsed ? ' collapsed' : ''}`}>
+            {aiCollapsed && (
+              <button
+                className="ai-rail"
+                data-tip={t('aiOpenAssistant')}
+                aria-label={t('aiOpenAssistant')}
+                onClick={() => setAiCollapsed(false)}
+              >
+                <GensparkMark size={22} />
+              </button>
+            )}
+            <AiPanel
+              api={aiApi}
+              filePath={filePath}
+              preset={aiPreset}
+              onCollapse={() => setAiCollapsed(true)}
+              onRunDone={() => void autoSaveAfterAiRun()}
+              onClearSelection={() => setAiSelection(null)}
+            />
+          </div>
         )}
         <div className="app-content">
           <div className="pdf-body">

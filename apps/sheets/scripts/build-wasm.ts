@@ -65,6 +65,7 @@ function findSdk(): { sysroot: string; clang: string } | null {
     '/usr/share/wasi-sysroot',
     '/usr/include/wasm32-wasi',
   ].find((path) => path && existsSync(path))
-  if (sysrootOnly && existsSync('/usr/bin/clang')) return { sysroot: sysrootOnly, clang: '/usr/bin/clang' }
+  if (sysrootOnly && existsSync('/usr/bin/clang'))
+    return { sysroot: sysrootOnly, clang: '/usr/bin/clang' }
   return null
 }

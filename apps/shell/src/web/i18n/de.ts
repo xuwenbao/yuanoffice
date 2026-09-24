@@ -10,5 +10,5 @@ export const de = {
   save: 'Speichern',
   discard: 'Verwerfen',
   cancel: 'Abbrechen',
-  failed: 'Dieser Ordner konnte nicht gelesen werden'
+  failed: 'Dieser Ordner konnte nicht gelesen werden',
 } satisfies Record<keyof typeof zh, string>

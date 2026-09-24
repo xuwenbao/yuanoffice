@@ -10,5 +10,5 @@ export const th = {
   save: 'บันทึก',
   discard: 'ทิ้ง',
   cancel: 'ยกเลิก',
-  failed: 'อ่านโฟลเดอร์นี้ไม่ได้'
+  failed: 'อ่านโฟลเดอร์นี้ไม่ได้',
 } satisfies Record<keyof typeof zh, string>

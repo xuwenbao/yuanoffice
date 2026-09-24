@@ -1,4 +1,12 @@
-import { ControlLink, DraftStore, ServiceFiles, downloadBytes, installFrameChild, postCloseResult, postDocState } from '@genoffice/platform-web'
+import {
+  ControlLink,
+  DraftStore,
+  ServiceFiles,
+  downloadBytes,
+  installFrameChild,
+  postCloseResult,
+  postDocState,
+} from '@genoffice/platform-web'
 import type { AgentControlPort, DocumentRef } from '@genoffice/platform'
 import type { AiSettings } from '@genoffice/ai-provider'
 import type {
@@ -28,7 +36,10 @@ export async function createWebDocsPlatform(): Promise<DocsPlatform> {
   await fetch('/api/session', { credentials: 'same-origin' })
   const files = new ServiceFiles('')
   const drafts = new DraftStore()
-  const link = new ControlLink(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`, '')
+  const link = new ControlLink(
+    `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`,
+    '',
+  )
   link.start('editor')
   let dirty = false
   installFrameChild({
@@ -67,7 +78,11 @@ export async function createWebDocsPlatform(): Promise<DocsPlatform> {
     file: {
       async read(ref: DocumentRef) {
         const data = await files.read(ref.path)
-        return { data: data.buffer as ArrayBuffer, name: nameOf(ref.path), hash: await sha256(data) }
+        return {
+          data: data.buffer as ArrayBuffer,
+          name: nameOf(ref.path),
+          hash: await sha256(data),
+        }
       },
       async save(ref, data) {
         const written = await files.write(ref.path, new Uint8Array(data), true)
@@ -77,7 +92,11 @@ export async function createWebDocsPlatform(): Promise<DocsPlatform> {
   }
 }
 
-function createWebDesktopApi(files: ServiceFiles, drafts: DraftStore, link: ControlLink): DesktopApi {
+function createWebDesktopApi(
+  files: ServiceFiles,
+  drafts: DraftStore,
+  link: ControlLink,
+): DesktopApi {
   const themeHandlers = new Set<(theme: UiTheme) => void>()
   const langHandlers = new Set<(lang: UiTheme extends never ? never : string) => void>()
   const mcpHandlers = new Set<(message: McpCommandMessage) => void>()
@@ -101,8 +120,7 @@ function createWebDesktopApi(files: ServiceFiles, drafts: DraftStore, link: Cont
       >
     },
     onLanguageChanged(handler) {
-      const wrapped = (language: string) =>
-        handler(language as Parameters<typeof handler>[0])
+      const wrapped = (language: string) => handler(language as Parameters<typeof handler>[0])
       langHandlers.add(wrapped as never)
       return () => langHandlers.delete(wrapped as never)
     },

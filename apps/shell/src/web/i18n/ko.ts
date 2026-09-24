@@ -10,5 +10,5 @@ export const ko = {
   save: '저장',
   discard: '삭제',
   cancel: '취소',
-  failed: '이 폴더를 읽을 수 없습니다'
+  failed: '이 폴더를 읽을 수 없습니다',
 } satisfies Record<keyof typeof zh, string>

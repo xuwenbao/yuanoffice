@@ -319,8 +319,8 @@ export function AiChatPanel({
     for (const a of wanted) {
       if (!ATTACHMENT_IMAGE_EXTS.has(a.ext) || previewRequestedRef.current.has(a.path)) continue
       previewRequestedRef.current.add(a.path)
-      void sheetsPlatform().api
-        .readAttachmentImage(a.path)
+      void sheetsPlatform()
+        .api.readAttachmentImage(a.path)
         .then((r) => {
           if (!previewRequestedRef.current.has(a.path)) return // removed while the read was in flight
           if (r.ok && r.base64 && r.mime) {

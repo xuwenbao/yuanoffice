@@ -21,27 +21,37 @@ export function liveToolDefinitions(): Array<{ name: LiveToolName; description: 
 const DESCRIPTION: Record<LiveToolName, string> = {
   open_documents:
     'List, read, or close documents open in the browser. close refuses a dirty document unless unsaved is "save" or "discard".',
-  read_document: 'Read the editor memory of an open document, including unsaved edits. Does not write the file.',
-  insert_content: 'Insert HTML into the open docs editor. Result persisted is false until save_document.',
-  replace_blocks: 'Replace a block range in the open docs editor. Result persisted is false until save_document.',
-  apply_ops: 'Apply docs ops to the open editor. Pass baseRevision to detect a stale read. persisted is false.',
-  apply_sheet_ops: 'Apply sheet ops to the open sheets editor. persisted is false until save_document.',
-  apply_slide_ops: 'Apply slide ops to the open slides editor. persisted is false until save_document.',
+  read_document:
+    'Read the editor memory of an open document, including unsaved edits. Does not write the file.',
+  insert_content:
+    'Insert HTML into the open docs editor. Result persisted is false until save_document.',
+  replace_blocks:
+    'Replace a block range in the open docs editor. Result persisted is false until save_document.',
+  apply_ops:
+    'Apply docs ops to the open editor. Pass baseRevision to detect a stale read. persisted is false.',
+  apply_sheet_ops:
+    'Apply sheet ops to the open sheets editor. persisted is false until save_document.',
+  apply_slide_ops:
+    'Apply slide ops to the open slides editor. persisted is false until save_document.',
   read_pdf: 'Read text from the open PDF viewer.',
   save_document:
     'Write the open editor back to its own path. Pass path to save a copy; an existing target needs overwrite true.',
-  document_status: 'Report dirty, revision, savedRevision, lastSavedAt, and connected for one open document.',
+  document_status:
+    'Report dirty, revision, savedRevision, lastSavedAt, and connected for one open document.',
 }
 
 export async function dispatchLiveTool(
   registry: EditorRegistry,
   name: string,
   args: Record<string, unknown>,
-  options: { save: (session: EditorSession, path: string, overwrite: boolean) => Promise<{ path: string }> },
+  options: {
+    save: (session: EditorSession, path: string, overwrite: boolean) => Promise<{ path: string }>
+  },
 ): Promise<LiveToolResult> {
   if (!isTool(name)) throw new LiveError('unsupported', `unknown tool ${name}`)
   if (name === 'open_documents') return openDocuments(registry, args, options)
-  const target = typeof args.document === 'string' ? args.document : typeof args.doc === 'string' ? args.doc : ''
+  const target =
+    typeof args.document === 'string' ? args.document : typeof args.doc === 'string' ? args.doc : ''
   if (!target) {
     throw new LiveError('invalid_argument', `${name} needs document (an editor id or path)`)
   }
@@ -72,7 +82,9 @@ export async function dispatchLiveTool(
 async function openDocuments(
   registry: EditorRegistry,
   args: Record<string, unknown>,
-  options: { save: (session: EditorSession, path: string, overwrite: boolean) => Promise<{ path: string }> },
+  options: {
+    save: (session: EditorSession, path: string, overwrite: boolean) => Promise<{ path: string }>
+  },
 ): Promise<LiveToolResult> {
   const action = String(args.action ?? 'list')
   if (action === 'list') {
@@ -93,10 +105,19 @@ async function openDocuments(
   const session = registry.resolve(target)
   if (action === 'read') {
     if (!session.connected) {
-      throw new LiveError('editor_disconnected', `${session.path} is registered but the page is gone`)
+      throw new LiveError(
+        'editor_disconnected',
+        `${session.path} is registered but the page is gone`,
+      )
     }
     const content = await session.run(readCommand(session.family), {})
-    return { id: session.editorId, path: session.path, dirty: session.dirty, content, persisted: false }
+    return {
+      id: session.editorId,
+      path: session.path,
+      dirty: session.dirty,
+      content,
+      persisted: false,
+    }
   }
   if (action === 'close') {
     if (session.dirty && args.unsaved !== 'save' && args.unsaved !== 'discard') {
@@ -123,7 +144,9 @@ async function saveDocument(
   registry: EditorRegistry,
   session: EditorSession,
   args: Record<string, unknown>,
-  options: { save: (session: EditorSession, path: string, overwrite: boolean) => Promise<{ path: string }> },
+  options: {
+    save: (session: EditorSession, path: string, overwrite: boolean) => Promise<{ path: string }>
+  },
 ): Promise<LiveToolResult> {
   const path = typeof args.path === 'string' && args.path ? args.path : session.path
   const overwrite = path === session.path || args.overwrite === true

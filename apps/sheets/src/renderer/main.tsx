@@ -63,8 +63,12 @@ async function bootstrap(): Promise<void> {
     // per-promise catch: standalone runs have no app:get-theme handler, and
     // that rejection must not drop a resolved language
     ;[lang, theme] = await Promise.all([
-      sheetsPlatform().api.getLanguage().catch(() => 'zh' as const),
-      sheetsPlatform().api.getTheme().catch(() => 'system' as const),
+      sheetsPlatform()
+        .api.getLanguage()
+        .catch(() => 'zh' as const),
+      sheetsPlatform()
+        .api.getTheme()
+        .catch(() => 'system' as const),
     ])
   } catch {
     /* dev renderer without the preload bridge */
@@ -74,8 +78,8 @@ async function bootstrap(): Promise<void> {
   applyTheme(theme)
   await loadCellFonts()
   sheetsPlatform().api?.onThemeChanged(applyTheme)
-  void sheetsPlatform().api
-    ?.getAiPanelPrefs?.()
+  void sheetsPlatform()
+    .api?.getAiPanelPrefs?.()
     .then(applyAiPanelPrefs)
     .catch(() => {})
   sheetsPlatform().api?.onAiPanelPrefsChanged?.(applyAiPanelPrefs)

@@ -40,8 +40,8 @@ export function onFontFamily(ctx: ActionCtx, family: string): void {
   }
   if (!ctx.selectedIds.length) return
   const groupId = ctx.groupIdOf(ctx.selectedIds[0]!)
-  void slidesPlatform().api
-    .setElementFont({
+  void slidesPlatform()
+    .api.setElementFont({
       slideIndex: ctx.current,
       sourceIds: ctx.selectedIds,
       fontFamily: family,
@@ -57,8 +57,8 @@ export function onFontSize(ctx: ActionCtx, pt: number): void {
   }
   if (!ctx.selectedIds.length) return
   const groupId = ctx.groupIdOf(ctx.selectedIds[0]!)
-  void slidesPlatform().api
-    .setElementFont({
+  void slidesPlatform()
+    .api.setElementFont({
       slideIndex: ctx.current,
       sourceIds: ctx.selectedIds,
       fontSizePt: pt,
@@ -75,8 +75,8 @@ export function onFontSizeStep(ctx: ActionCtx, step: FontSizeStep): void {
   }
   if (!ctx.selectedIds.length) return
   const groupId = ctx.groupIdOf(ctx.selectedIds[0]!)
-  void slidesPlatform().api
-    .setElementFont({
+  void slidesPlatform()
+    .api.setElementFont({
       slideIndex: ctx.current,
       sourceIds: ctx.selectedIds,
       fontSizeStep: step,
@@ -101,8 +101,8 @@ export function onAlign(ctx: ActionCtx, align: 'left' | 'center' | 'right' | 'ju
   }
   if (!ctx.selectedIds.length) return
   const groupId = ctx.groupIdOf(ctx.selectedIds[0]!)
-  void slidesPlatform().api
-    .setElementParagraphFormat({
+  void slidesPlatform()
+    .api.setElementParagraphFormat({
       slideIndex: ctx.current,
       sourceIds: ctx.selectedIds,
       align,
@@ -129,8 +129,8 @@ export function onTextToggle(
     if (!runs.length || runs.some((r) => !r[kind])) allOn = false
   }
   const groupId = ctx.groupIdOf(ctx.selectedIds[0]!)
-  void slidesPlatform().api
-    .setElementFont({
+  void slidesPlatform()
+    .api.setElementFont({
       slideIndex: ctx.current,
       sourceIds: ctx.selectedIds,
       [kind]: !allOn,
@@ -143,8 +143,8 @@ export function onTextToggle(
 export function onElementTextColor(ctx: ActionCtx, hex: string): void {
   if (!ctx.selectedIds.length) return
   const groupId = ctx.groupIdOf(ctx.selectedIds[0]!)
-  void slidesPlatform().api
-    .setElementFont({
+  void slidesPlatform()
+    .api.setElementFont({
       slideIndex: ctx.current,
       sourceIds: ctx.selectedIds,
       color: hex,
@@ -225,8 +225,8 @@ export function onParagraphFormat(ctx: ActionCtx, patch: ParagraphFormatPatch): 
     if (cur === patch.bullet) patch = { ...patch, bullet: 'none' }
   }
   const groupId = ctx.groupIdOf(ctx.selectedIds[0]!)
-  void slidesPlatform().api
-    .setElementParagraphFormat({
+  void slidesPlatform()
+    .api.setElementParagraphFormat({
       slideIndex: ctx.current,
       sourceIds: ctx.selectedIds,
       ...patch,

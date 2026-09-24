@@ -1,4 +1,10 @@
-import { ControlLink, ServiceFiles, installFrameChild, postCloseResult, postDocState } from '@genoffice/platform-web'
+import {
+  ControlLink,
+  ServiceFiles,
+  installFrameChild,
+  postCloseResult,
+  postDocState,
+} from '@genoffice/platform-web'
 import { readPdfiumText } from './pdfium-read'
 
 const params = new URLSearchParams(location.search)
@@ -9,7 +15,10 @@ let dirty = false
 async function main(): Promise<void> {
   await fetch('/api/session', { credentials: 'same-origin' })
   const files = new ServiceFiles('')
-  const link = new ControlLink(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`, '')
+  const link = new ControlLink(
+    `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`,
+    '',
+  )
   link.start('editor')
   const root = document.getElementById('root')
   if (!path) {

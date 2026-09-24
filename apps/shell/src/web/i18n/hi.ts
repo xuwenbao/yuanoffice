@@ -10,5 +10,5 @@ export const hi = {
   save: 'सहेजें',
   discard: 'छोड़ें',
   cancel: 'रद्द करें',
-  failed: 'इस फ़ोल्डर को पढ़ा नहीं जा सका'
+  failed: 'इस फ़ोल्डर को पढ़ा नहीं जा सका',
 } satisfies Record<keyof typeof zh, string>

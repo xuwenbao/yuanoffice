@@ -164,8 +164,8 @@ export function SignatureDialog({
 
   useEffect(() => {
     let alive = true
-    pdfPlatform().api
-      .listSavedSignatures()
+    pdfPlatform()
+      .api.listSavedSignatures()
       .then((list) => {
         if (alive) setSaved(list)
       })
@@ -177,7 +177,9 @@ export function SignatureDialog({
 
   const removeSaved = (id: string) => {
     setSaved((prev) => prev.filter((s) => s.id !== id))
-    pdfPlatform().api.removeSavedSignature(id).catch(() => {})
+    pdfPlatform()
+      .api.removeSavedSignature(id)
+      .catch(() => {})
   }
 
   /** Processed image + preview data URL, recomputed when the source or the B&W toggle changes */
@@ -241,7 +243,10 @@ export function SignatureDialog({
 
   /** New signature confirmed: persist it for reuse (unless opted out), then hand off to placement */
   const finish = (sig: SignatureData) => {
-    if (saveForReuse) pdfPlatform().api.addSavedSignature(sig).catch(() => {})
+    if (saveForReuse)
+      pdfPlatform()
+        .api.addSavedSignature(sig)
+        .catch(() => {})
     onConfirm(sig)
   }
 

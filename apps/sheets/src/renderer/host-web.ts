@@ -5,11 +5,20 @@ import {
   postCloseResult,
   postDocState,
 } from '@genoffice/platform-web'
-import { workbookFileSchema, workbookRangeResultSchema, type WorkbookFile } from '../shared/desktop-api'
+import {
+  workbookFileSchema,
+  workbookRangeResultSchema,
+  type WorkbookFile,
+} from '../shared/desktop-api'
 import type { DesktopApi } from '../shared/desktop-api'
 import { setSheetsPlatform } from './platform'
 
-const AI_PREFS = { side: 'left' as const, fontSize: 'default' as const, customFontSize: 14, spellcheck: true }
+const AI_PREFS = {
+  side: 'left' as const,
+  fontSize: 'default' as const,
+  customFontSize: 14,
+  spellcheck: true,
+}
 const EDIT_KEYS = [
   'edits',
   'bulkConstantFills',
@@ -48,7 +57,10 @@ export async function installSheetsHost(): Promise<void> {
   const editorId = params.get('editorId') || `sheets-${Math.random().toString(36).slice(2, 10)}`
   const queuedPath = params.get('path')
   const files = new ServiceFiles('')
-  const link = new ControlLink(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`, '')
+  const link = new ControlLink(
+    `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`,
+    '',
+  )
   link.start('editor')
   let opened = false
   let currentPath = queuedPath ?? ''
@@ -57,7 +69,10 @@ export async function installSheetsHost(): Promise<void> {
   let dirty = false
   let worker: Worker | null = null
   let nextId = 1
-  const pending = new Map<number, { resolve: (text: string) => void; reject: (error: Error) => void }>()
+  const pending = new Map<
+    number,
+    { resolve: (text: string) => void; reject: (error: Error) => void }
+  >()
 
   const titleOf = (path: string) => path.split(/[/\\]/).pop() || path
   const publish = () => {
@@ -91,7 +106,8 @@ export async function installSheetsHost(): Promise<void> {
       const waiter = pending.get(event.data.requestId)
       if (!waiter) return
       pending.delete(event.data.requestId)
-      if (event.data.type === 'error') waiter.reject(new Error(event.data.error || 'xlsx worker failed'))
+      if (event.data.type === 'error')
+        waiter.reject(new Error(event.data.error || 'xlsx worker failed'))
       else waiter.resolve(event.data.text ?? '')
     }
     return worker
@@ -113,13 +129,17 @@ export async function installSheetsHost(): Promise<void> {
 
   const implemented: Partial<DesktopApi> = {
     async getLanguage() {
-      return (localStorage.getItem('genoffice.language') || 'zh') as Awaited<ReturnType<DesktopApi['getLanguage']>>
+      return (localStorage.getItem('genoffice.language') || 'zh') as Awaited<
+        ReturnType<DesktopApi['getLanguage']>
+      >
     },
     onLanguageChanged() {
       return () => {}
     },
     async getTheme() {
-      return (localStorage.getItem('genoffice.theme') as 'light' | 'dark' | 'system' | null) || 'system'
+      return (
+        (localStorage.getItem('genoffice.theme') as 'light' | 'dark' | 'system' | null) || 'system'
+      )
     },
     onThemeChanged() {
       return () => {}
@@ -163,7 +183,9 @@ export async function installSheetsHost(): Promise<void> {
         readOnly: false,
       })
       if (!parsed.success) {
-        throw new Error(parsed.error.issues[0]?.message ?? 'workbook metadata did not match the page')
+        throw new Error(
+          parsed.error.issues[0]?.message ?? 'workbook metadata did not match the page',
+        )
       }
       file = parsed.data
       publish()
@@ -188,7 +210,9 @@ export async function installSheetsHost(): Promise<void> {
     },
     async closeWorkbook() {
       if (file) {
-        await dispatch(JSON.stringify({ command: { command: 'close', sessionId: file.sessionId } })).catch(() => {})
+        await dispatch(
+          JSON.stringify({ command: { command: 'close', sessionId: file.sessionId } }),
+        ).catch(() => {})
       }
       worker?.terminate()
       worker = null
@@ -209,7 +233,9 @@ export async function installSheetsHost(): Promise<void> {
       return { ok: false }
     },
     async getAiSettings() {
-      return { provider: 'openai', providers: {} } as Awaited<ReturnType<DesktopApi['getAiSettings']>>
+      return { provider: 'openai', providers: {} } as Awaited<
+        ReturnType<DesktopApi['getAiSettings']>
+      >
     },
   }
 
@@ -219,7 +245,8 @@ export async function installSheetsHost(): Promise<void> {
         if (Reflect.has(target, prop)) return Reflect.get(target, prop, receiver)
         const name = String(prop)
         if (name.startsWith('on')) return () => () => {}
-        if (name.startsWith('set') || name.startsWith('report') || name.startsWith('send')) return () => {}
+        if (name.startsWith('set') || name.startsWith('report') || name.startsWith('send'))
+          return () => {}
         return async () => null
       },
     }),

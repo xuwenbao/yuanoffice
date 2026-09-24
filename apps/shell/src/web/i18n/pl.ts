@@ -10,5 +10,5 @@ export const pl = {
   save: 'Zapisz',
   discard: 'Odrzuć',
   cancel: 'Anuluj',
-  failed: 'Nie można odczytać tego folderu'
+  failed: 'Nie można odczytać tego folderu',
 } satisfies Record<keyof typeof zh, string>

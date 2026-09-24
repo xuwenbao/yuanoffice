@@ -10,5 +10,5 @@ export const pt = {
   save: 'Salvar',
   discard: 'Descartar',
   cancel: 'Cancelar',
-  failed: 'Não foi possível ler esta pasta'
+  failed: 'Não foi possível ler esta pasta',
 } satisfies Record<keyof typeof zh, string>

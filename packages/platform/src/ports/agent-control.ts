@@ -17,12 +17,7 @@ export interface AgentCommand {
 export interface AgentControlPort {
   /** Subscribe to commands aimed at this editor. Returns unsubscribe. */
   onCommand(handler: (command: AgentCommand) => void): () => void
-  reportResult(result: {
-    requestId: string
-    ok: boolean
-    result?: unknown
-    error?: string
-  }): void
+  reportResult(result: { requestId: string; ok: boolean; result?: unknown; error?: string }): void
   /** Announce that the editor can accept commands, and keep state current. */
   publish(state: LiveEditorState): void
   /** Drop the registration. `dirty: false` releases the file immediately. */
