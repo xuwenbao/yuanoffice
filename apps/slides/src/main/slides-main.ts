@@ -57,7 +57,6 @@ import {
   transformRequest,
 } from '../domain/document'
 import {
-  resolveGroupChildId,
   runTxn,
   type Op,
   type OpRecord,
@@ -86,7 +85,6 @@ import { getUiLang, normalizeLang, setUiLang } from '@genoffice/i18n'
 import { ProjectStore } from '@genoffice/project-store'
 import {
   copyElementData,
-  findGroupChild,
   patchBodyPrAutofit,
   getElementLink,
   getSlideLinks,

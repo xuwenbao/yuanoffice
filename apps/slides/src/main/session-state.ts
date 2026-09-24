@@ -13,7 +13,6 @@ import {
   parseTheme,
   resolveSchemeColor,
   type OpenedPptx,
-  type Slide,
 } from '@genoffice/pptx-engine'
 import {
   buildRenderSlide,
