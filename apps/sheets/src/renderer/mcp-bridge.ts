@@ -5,6 +5,7 @@ import {
   type WorkbookOperation,
 } from '@genoffice/xlsx-gateway/domain/workbook-dsl'
 import { normalizeSheetRefs, primaryCellOf, primarySheetId, type SheetRef } from './mcp-sheet-refs'
+import { sheetsPlatform } from './platform'
 
 /**
  * Renderer half of the MCP → sheets-grid bridge.
@@ -48,7 +49,7 @@ export interface McpSheetHandlers {
 }
 
 export function installSheetsMcpBridge(handlers: McpSheetHandlers): () => void {
-  const api = window.desktopApi
+  const api = sheetsPlatform().api
   if (typeof api?.onMcpCommand !== 'function') return () => {}
 
   /** one command at a time, in arrival order — applies and saves must not interleave */

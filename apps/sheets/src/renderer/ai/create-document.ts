@@ -7,6 +7,7 @@
 import { csvSheetById, serializeActiveSheetCsv, sheetHasFormulas } from '../csv-export'
 import type { LazyWorkbookState, UniverRuntime } from '../univer-state'
 import type { CreateDocumentToolOutcome, CreateDocumentToolRequest } from './tools'
+import { sheetsPlatform } from '../platform'
 
 export interface AiCreateDocumentContext {
   univerRef: { readonly current: UniverRuntime | null }
@@ -23,7 +24,7 @@ export async function createAiDocument(
     request.type === 'md' ||
     request.type === 'html'
   ) {
-    const result = await window.desktopApi.createDocument(request)
+    const result = await sheetsPlatform().api.createDocument(request)
     if (!result.ok) return { ok: false, error: result.error ?? 'creating the document failed' }
     return {
       ok: true,
@@ -61,7 +62,7 @@ export async function createAiDocument(
   }
   const sheetName = sheet.getSheetName()
   const title = request.title?.trim() || sheetName
-  const result = await window.desktopApi.createDocument({
+  const result = await sheetsPlatform().api.createDocument({
     type: request.type,
     title,
     content,

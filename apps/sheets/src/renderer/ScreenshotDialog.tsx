@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import type { ScreenSourcesResult } from '../shared/desktop-api'
 import { useI18n } from './i18n/locale'
+import { sheetsPlatform } from './platform'
 
 /// Excel's Insert → Screenshot: a picker over the OS's capturable surfaces.
 /// Screens first, then other windows (our own window is excluded by the main
@@ -30,8 +31,8 @@ export function ScreenshotDialog({
     let stale = false
     setState({ phase: 'loading' })
     setFailed(false)
-    window.desktopApi
-      .captureScreenSources()
+    sheetsPlatform()
+      .api.captureScreenSources()
       .then((result) => {
         if (stale) return
         if (result.status === 'denied') setState({ phase: 'denied' })
@@ -51,8 +52,8 @@ export function ScreenshotDialog({
     if (capturingId !== null) return
     setCapturingId(id)
     setFailed(false)
-    window.desktopApi
-      .captureScreenSource({ id })
+    sheetsPlatform()
+      .api.captureScreenSource({ id })
       .then((result) => {
         if (!result) {
           setFailed(true)

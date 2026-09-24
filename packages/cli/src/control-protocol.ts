@@ -8,7 +8,7 @@
  */
 
 export const CONTROL_FILE = 'control.json'
-export const CONTROL_PROTOCOL = 1
+export const CONTROL_PROTOCOL = 2
 export const CONTROL_MAX_REQUEST_BYTES = 64 * 1024
 
 export interface ControlEndpoint {
@@ -17,6 +17,8 @@ export interface ControlEndpoint {
   /** unix socket path or `\\.\pipe\...` name */
   endpoint: string
   token: string
+  /** Present on the browser control service. Desktop shells omit it. */
+  role?: 'web'
 }
 
 /** Where to put the caret / selection in an open document; one kind per file type. */
@@ -27,7 +29,13 @@ export type ControlTarget =
   | { kind: 'page'; page: number }
 
 export type ControlRequest =
-  { cmd: 'open'; path: string; target?: ControlTarget } | { cmd: 'selection'; path: string }
+  | { cmd: 'open'; path: string; target?: ControlTarget }
+  | { cmd: 'selection'; path: string }
+  | { cmd: 'editor-list' }
+  | { cmd: 'editor-read'; doc: string }
+  | { cmd: 'editor-apply'; doc: string; ops: unknown; baseRevision?: number }
+  | { cmd: 'editor-status'; doc: string }
+  | { cmd: 'editor-save'; doc: string; path?: string; overwrite?: boolean }
 
 export interface ControlEnvelope {
   token: string
@@ -43,6 +51,9 @@ export type ControlErrorReason =
   | 'file_not_found'
   | 'file_not_open_in_gui'
   | 'app_unavailable'
+  | 'editor_disconnected'
+  | 'unsaved_changes'
+  | 'revision_conflict'
 
 export interface ControlError {
   reason: ControlErrorReason

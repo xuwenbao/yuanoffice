@@ -16,6 +16,7 @@ import {
   type PrintLayout,
   type PrintOrientation,
 } from '../../shared/print-html'
+import { slidesPlatform } from '../platform'
 import { renderSlidesToPngBase64 } from '../export-render'
 
 type RangeMode = 'all' | 'current' | 'custom'
@@ -71,7 +72,7 @@ export function PrintDialog({
     void (async () => {
       try {
         const rendered = await renderSlidesToPngBase64(slides, images)
-        const noteTexts = await Promise.all(slides.map((_s, i) => window.slidesApi.getNotes(i)))
+        const noteTexts = await Promise.all(slides.map((_s, i) => slidesPlatform().api.getNotes(i)))
         if (!alive) return
         blobUrlsRef.current = rendered.map((b64) =>
           URL.createObjectURL(
@@ -155,7 +156,7 @@ export function PrintDialog({
     setPrinting(true)
     try {
       const first = slides[selected[0]]
-      const r = await window.slidesApi.printSlides({
+      const r = await slidesPlatform().api.printSlides({
         pngsBase64: selected.map((i) => pngs[i]),
         widthPx: first.widthPx,
         heightPx: first.heightPx,

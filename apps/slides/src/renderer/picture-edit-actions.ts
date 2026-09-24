@@ -7,6 +7,7 @@ import { FIT_WIDTH } from './app-constants'
 import type { ActionCtx } from './action-context'
 import { renderSelectionToPngBase64 } from './selection-image'
 import { t } from './i18n/locale'
+import { slidesPlatform } from './platform'
 
 /** Enter picture crop mode: find the selected picture node and read its box and srcRect */
 export function startCrop(ctx: ActionCtx): void {
@@ -49,7 +50,7 @@ export async function commitCrop(
   // The element frame moves/resizes to the on-screen crop frame in the same atomic
   // edit: the kept region stays exactly where it was framed (PowerPoint semantics),
   // dragging outward restores original content, and one undo reverts everything.
-  const updated = await window.slidesApi.editPictureSrcRect({
+  const updated = await slidesPlatform().api.editPictureSrcRect({
     slideIndex: ctx.current,
     sourceId,
     srcRect: rect,
@@ -110,7 +111,7 @@ export async function applyCutout(ctx: ActionCtx, pngDataUrl: string): Promise<v
     ctx.setStatus(t('appStatusCutoutEncodeFailed'))
     return
   }
-  const updated = await window.slidesApi.replacePictureBytes({
+  const updated = await slidesPlatform().api.replacePictureBytes({
     slideIndex: ctx.current,
     sourceId: targetId,
     base64,
@@ -133,9 +134,9 @@ export async function replacePicture(ctx: ActionCtx): Promise<void> {
   const targetId = ctx.selectedIds[0]!
   const node = ctx.slide.nodes.find((n) => n.sourceId === targetId)
   if (!node || node.type !== 'picture') return
-  const picked = await window.slidesApi.pickPictureFile()
+  const picked = await slidesPlatform().api.pickPictureFile()
   if (!picked) return
-  const updated = await window.slidesApi.replacePictureBytes({
+  const updated = await slidesPlatform().api.replacePictureBytes({
     slideIndex: ctx.current,
     sourceId: targetId,
     base64: picked.base64,
@@ -173,7 +174,7 @@ export async function saveSelectionAsPicture(
   if (!ctx.slide || !canSaveAsPicture(ctx, sourceIds)) return
   try {
     const pngBase64 = await renderSelectionToPngBase64(ctx.slide, sourceIds, ctx.images)
-    const r = await window.slidesApi.savePicture({
+    const r = await slidesPlatform().api.savePicture({
       pngBase64,
       defaultName: pictureFileName(ctx, sourceIds),
     })

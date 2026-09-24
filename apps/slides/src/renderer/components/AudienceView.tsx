@@ -18,6 +18,7 @@ import { ShowMediaLayer } from './ShowMediaLayer'
 import { useI18n } from '../i18n/locale'
 import { MorphStage } from './MorphStage'
 import { InkLayer, type InkStroke } from './ShowInk'
+import { slidesPlatform } from '../platform'
 
 const ANIMATED = ['fade', 'push', 'wipe', 'split', 'circle'] as const
 
@@ -94,11 +95,13 @@ export function AudienceView() {
   useEffect(() => {
     let stop = false
     const tryLoad = (attempt: number) => {
-      void window.slidesApi.getRenderSlides().then((r) => {
-        if (stop) return
-        if (r && r.length > 0) setSlides(r)
-        else if (attempt < 20) window.setTimeout(() => tryLoad(attempt + 1), 250)
-      })
+      void slidesPlatform()
+        .api.getRenderSlides()
+        .then((r) => {
+          if (stop) return
+          if (r && r.length > 0) setSlides(r)
+          else if (attempt < 20) window.setTimeout(() => tryLoad(attempt + 1), 250)
+        })
     }
     tryLoad(0)
     return () => {
@@ -112,7 +115,7 @@ export function AudienceView() {
   // the fresh deck instead of keeping stale animation state.
   useEffect(
     () =>
-      window.slidesApi.onDeckChanged?.(({ slides: all }) => {
+      slidesPlatform().api.onDeckChanged?.(({ slides: all }) => {
         if (all.length === 0) return
         cursorRef.current = ''
         setSlides(all)
@@ -123,13 +126,13 @@ export function AudienceView() {
   useEffect(() => {
     if (!slides) return
     let cancelled = false
-    void Promise.all(slides.map((_, i) => window.slidesApi.getTransition(i))).then((kinds) => {
+    void Promise.all(slides.map((_, i) => slidesPlatform().api.getTransition(i))).then((kinds) => {
       if (!cancelled) transRef.current = kinds
     })
-    void Promise.all(slides.map((_, i) => window.slidesApi.getAnimations(i))).then((lists) => {
+    void Promise.all(slides.map((_, i) => slidesPlatform().api.getAnimations(i))).then((lists) => {
       if (!cancelled) setAllAnims(lists)
     })
-    void Promise.all(slides.map((_, i) => window.slidesApi.getShapeKeys(i))).then((keys) => {
+    void Promise.all(slides.map((_, i) => slidesPlatform().api.getShapeKeys(i))).then((keys) => {
       if (!cancelled) keysRef.current = keys
     })
     return () => {
@@ -138,8 +141,8 @@ export function AudienceView() {
   }, [slides])
 
   useEffect(() => {
-    const offSync = window.slidesApi.onShowSync(setSync)
-    const offInk = window.slidesApi.onShowInk((ev) => {
+    const offSync = slidesPlatform().api.onShowSync(setSync)
+    const offInk = slidesPlatform().api.onShowInk((ev) => {
       if (ev.type === 'clear') {
         setStrokes([])
         setLaser(null)
@@ -156,9 +159,11 @@ export function AudienceView() {
       }
     })
     // When mounted after the presenter's first broadcast, snapshot the current state
-    void window.slidesApi.audienceReady().then((s) => {
-      if (s) setSync((prev) => prev ?? s)
-    })
+    void slidesPlatform()
+      .api.audienceReady()
+      .then((s) => {
+        if (s) setSync((prev) => prev ?? s)
+      })
     return () => {
       offSync()
       offInk()
@@ -176,7 +181,7 @@ export function AudienceView() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault()
-        window.slidesApi.audienceNav('exit')
+        slidesPlatform().api.audienceNav('exit')
       } else if (
         e.key === 'ArrowRight' ||
         e.key === 'ArrowDown' ||
@@ -185,10 +190,10 @@ export function AudienceView() {
         e.key === 'PageDown'
       ) {
         e.preventDefault()
-        window.slidesApi.audienceNav('next')
+        slidesPlatform().api.audienceNav('next')
       } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
         e.preventDefault()
-        window.slidesApi.audienceNav('prev')
+        slidesPlatform().api.audienceNav('prev')
       }
     }
     window.addEventListener('keydown', onKey, true)
@@ -248,10 +253,10 @@ export function AudienceView() {
   return (
     <div
       className="slideshow"
-      onClick={() => window.slidesApi.audienceNav('next')}
+      onClick={() => slidesPlatform().api.audienceNav('next')}
       onContextMenu={(e) => {
         e.preventDefault()
-        window.slidesApi.audienceNav('prev')
+        slidesPlatform().api.audienceNav('prev')
       }}
     >
       {sync.ended ? (

@@ -25,7 +25,8 @@ const registry = defaultRegistry()
 describe('mcp tool table', () => {
   it('names every command option it exposes and builds a schema for each tool', () => {
     const tools = resolveTools(registry)
-    expect(tools.length).toBe(TOOLS.length)
+    const registered = TOOLS.filter((tool) => registry.get(tool.command))
+    expect(tools.length).toBe(registered.length)
     const names = [...tools.map((t) => t.name), ...DECK_TOOLS.map((t) => t.name)]
     expect(new Set(names).size).toBe(names.length)
     for (const name of names) expect(name).toMatch(/^[a-z][a-z0-9_]*$/)
@@ -155,7 +156,7 @@ describe('mcp server', () => {
     expect(props.ops?.anyOf).toBeDefined()
     expect(apply.annotations?.readOnlyHint).toBe(false)
     expect(apply.annotations?.openWorldHint).toBe(false)
-    expect(tools.find((t) => t.name === 'search')!.annotations?.openWorldHint).toBe(true)
+    expect(tools.find((t) => t.name === 'search')).toBeUndefined()
     expect(tools.find((t) => t.name === 'docs_read')!.annotations?.readOnlyHint).toBe(true)
   })
 

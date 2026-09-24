@@ -38,7 +38,14 @@ export default defineConfig({
   },
   renderer: {
     plugins: [react()],
-    resolve: { alias: localAlias },
+    resolve: {
+      alias: {
+        ...localAlias,
+        '@host': resolve(__dirname, 'src/renderer/host-electron.ts'),
+        '@genoffice/platform': resolve(__dirname, '../../packages/platform/src/index.ts'),
+        'docs-electron-platform': resolve(__dirname, 'src/renderer/platform-electron.ts'),
+      },
+    },
     server: {
       // Overridable so multiple genoffice dev instances can coexist (default 5173).
       port: Number(process.env.DOCS_DEV_PORT) || 5173,

@@ -16,6 +16,7 @@ import { ColorPicker } from '@genoffice/ui'
 // translator is kept in sync on every language switch and re-renders arrive
 // with the host component
 import { t } from './i18n/locale'
+import { sheetsPlatform } from './platform'
 
 /// Portal wrapper for hosts inside Univer's float DOM (chart editor): the
 /// float container is transformed and clips overflow, which breaks the CSS
@@ -92,7 +93,7 @@ export function ColorDropdown({
     // capture phase: the grid canvas stops mousedown propagation, so bubble-phase listeners never fire
     window.addEventListener('pointerdown', onDown, true)
     window.addEventListener('keydown', onKey)
-    const offChrome = window.desktopApi?.onChromePressed?.(() => setOpen(false))
+    const offChrome = sheetsPlatform().api?.onChromePressed?.(() => setOpen(false))
     return () => {
       window.removeEventListener('pointerdown', onDown, true)
       window.removeEventListener('keydown', onKey)

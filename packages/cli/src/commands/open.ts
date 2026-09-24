@@ -42,6 +42,15 @@ export const openCommand: CommandDef = {
     const target = parseTarget(args, path)
     let endpoint = controlEndpoint(ctx.env)
     if (!endpoint) {
+      const web = controlEndpoint(ctx.env, 'web')
+      if (web) {
+        const result = await controlRequest(web, {
+          cmd: 'open',
+          path,
+          ...(target ? { target } : {}),
+        })
+        return { summary: `opening ${path} in the browser`, detail: result }
+      }
       const launch = await spawnApp(path, ctx)
       if (!target) return { summary: `opening ${path} in GenOffice`, detail: { app: launch } }
       endpoint = await waitForControlEndpoint(ctx.env, APP_START_TIMEOUT_MS)

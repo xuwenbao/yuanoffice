@@ -9,6 +9,7 @@ import type {
   PictureRenderNode,
   TableRenderNode,
 } from '@genoffice/pptx-render'
+import { slidesPlatform } from './platform'
 import { handleSlidesControl, type ControlRequest } from './control'
 import type {
   AiSettings,
@@ -29,6 +30,7 @@ import type {
   SectionInfo,
   SetEffectsPatch,
   SlideComment,
+  SlidesApi,
   TransitionKind,
 } from '../shared/ipc'
 import { SlideCanvas, selectionChromeColor, type SlideCanvasHandle } from './SlideCanvas'
@@ -108,7 +110,7 @@ import { t, useI18n } from './i18n/locale'
 import { AiPanel } from './ai/AiPanel'
 import { ChartDataDialog } from './components/ChartDataDialog'
 import type { BrushFormat } from './format-brush'
-import { isTextUndoTarget, shouldRouteUndoToDeck } from './undo-routing'
+import { isTextUndoTarget, shouldRouteHistoryToDeck } from './undo-routing'
 import type {
   ActionCtx,
   CropTargetState,
@@ -343,8 +345,8 @@ export function App() {
   const missingFontsDismissed = useRef(false)
   const refreshMissingFonts = useCallback(() => {
     if (missingFontsDismissed.current) return
-    window.slidesApi
-      .fontMissing?.()
+    slidesPlatform()
+      .api.fontMissing?.()
       .then((m) => setMissingFonts(m ?? []))
       .catch(() => {})
   }, [])
@@ -356,7 +358,7 @@ export function App() {
   // Font store changed (download / local install): re-register FontFaces, refresh the banner
   useEffect(
     () =>
-      window.slidesApi.onFontsChanged?.(() => {
+      slidesPlatform().api.onFontsChanged?.(() => {
         void syncPrivateFonts()
         refreshMissingFonts()
       }),
@@ -365,7 +367,7 @@ export function App() {
   const downloadMissingFonts = useCallback(async () => {
     setFontBannerBusy(true)
     try {
-      for (const f of missingFonts) await window.slidesApi.fontDownload?.(f)
+      for (const f of missingFonts) await slidesPlatform().api.fontDownload?.(f)
     } finally {
       setFontBannerBusy(false)
       refreshMissingFonts()
@@ -450,9 +452,9 @@ export function App() {
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
   }
-  const [autoSave, setAutoSave] = useAutoSavePref('ai-slides-auto-save', window.slidesApi)
+  const [autoSave, setAutoSave] = useAutoSavePref('ai-slides-auto-save', slidesPlatform().api)
   useEffect(() => {
-    window.slidesApi.setAutoSavePref?.(autoSave)
+    slidesPlatform().api.setAutoSavePref?.(autoSave)
   }, [autoSave])
   const [showAi, setShowAi] = useState(() => localStorage.getItem('ai-slides-show-ai') !== '0')
   const [showFormat, setShowFormat] = useState(false)
@@ -467,16 +469,14 @@ export function App() {
     slideShot?: boolean
   } | null>(null)
   const [_recent, setRecent] = useState<string[]>([])
-  const consumePendingRef = useRef<ReturnType<typeof window.slidesApi.consumePendingOpen> | null>(
-    null,
-  )
+  const consumePendingRef = useRef<ReturnType<SlidesApi['consumePendingOpen']> | null>(null)
   const bootHandledRef = useRef(false)
   const [images, setImages] = useState<Map<string, HTMLImageElement>>(new Map())
   const imageLoaderRef = useRef<ReturnType<typeof createImageLoader> | null>(null)
   const [hasClipboard, setHasClipboard] = useState(false)
   // The clipboard is app-wide (copies land from other windows) and external content counts too
   useEffect(() => {
-    const probe = () => void window.slidesApi.clipboardProbe().then(setHasClipboard)
+    const probe = () => void slidesPlatform().api.clipboardProbe().then(setHasClipboard)
     probe()
     window.addEventListener('focus', probe)
     return () => window.removeEventListener('focus', probe)
@@ -647,7 +647,10 @@ export function App() {
     const pending = notesDraftRef.current
     if (!pending) return
     notesDraftRef.current = null
-    const ok = await window.slidesApi.setNotes({ slideIndex: pending.index, text: pending.text })
+    const ok = await slidesPlatform().api.setNotes({
+      slideIndex: pending.index,
+      text: pending.text,
+    })
     if (ok) setDirty(true)
   }, [])
 
@@ -851,7 +854,9 @@ export function App() {
           : t('appStatusNewBlank'),
       )
       // Fetch the layout list asynchronously (doesn't block opening)
-      void window.slidesApi.getLayouts().then((r) => setLayoutsResult(r))
+      void slidesPlatform()
+        .api.getLayouts()
+        .then((r) => setLayoutsResult(r))
     },
     [fitZoom],
   )
@@ -891,7 +896,7 @@ export function App() {
   )
 
   const openDialog = useCallback(async () => {
-    const r = await window.slidesApi.openPptx(FIT_WIDTH)
+    const r = await slidesPlatform().api.openPptx(FIT_WIDTH)
     applyOpen(r)
   }, [applyOpen])
 
@@ -908,29 +913,31 @@ export function App() {
 
   // Close guard (closing tab/window) chose "Save": run the full save flow and report the result
   useEffect(() => {
-    return window.slidesApi.onCloseSaveRequest?.(() => {
+    return slidesPlatform().api.onCloseSaveRequest?.(() => {
       void save().then(
-        (ok) => window.slidesApi.reportCloseSaveResult(ok),
-        () => window.slidesApi.reportCloseSaveResult(false),
+        (ok) => slidesPlatform().api.reportCloseSaveResult(ok),
+        () => slidesPlatform().api.reportCloseSaveResult(false),
       )
     })
   }, [save])
 
   // Undo/redo stack occupancy pushed by the main process: the QAT buttons grey out when empty
   const [histState, setHistState] = useState({ canUndo: false, canRedo: false })
-  useEffect(() => window.slidesApi.onHistoryChanged?.(setHistState), [])
+  useEffect(() => slidesPlatform().api.onHistoryChanged?.(setHistState), [])
 
   // Shared session (a second window on the same file): apply the other window's
   // edits without touching local selection or an open editor — the ids are stable,
   // so the selection stays valid; a same-element conflict resolves last-write-wins.
   useEffect(
     () =>
-      window.slidesApi.onDeckChanged?.(({ slides: all }) => {
+      slidesPlatform().api.onDeckChanged?.(({ slides: all }) => {
         setSlides(all)
         setCurrent((c) => Math.min(c, Math.max(0, all.length - 1)))
         // The broadcast also fires for undo back to a clean state — ask the
         // session instead of assuming the change dirtied it
-        void window.slidesApi.isDirty?.().then((d) => setDirty(!!d))
+        void slidesPlatform()
+          .api.isDirty?.()
+          .then((d) => setDirty(!!d))
       }),
     [],
   )
@@ -957,13 +964,15 @@ export function App() {
     let saving = false
     const tick = () => {
       if (saving || editing || editingCell || mouseDownRef.current) return
-      void window.slidesApi.isDirty().then((d) => {
-        if (!d || saving) return
-        saving = true
-        void save(true).finally(() => {
-          saving = false
+      void slidesPlatform()
+        .api.isDirty()
+        .then((d) => {
+          if (!d || saving) return
+          saving = true
+          void save(true).finally(() => {
+            saving = false
+          })
         })
-      })
     }
     const id = window.setInterval(tick, 30_000)
     window.addEventListener('blur', tick)
@@ -985,7 +994,7 @@ export function App() {
     if (headlessExportStartedRef.current) return
     headlessExportStartedRef.current = true
     void (async () => {
-      const outPath = await window.slidesApi.consumeHeadlessExport()
+      const outPath = await slidesPlatform().api.consumeHeadlessExport()
       if (!outPath) return
       const report = await runHeadlessPdfExport(
         outPath,
@@ -1003,7 +1012,7 @@ export function App() {
         },
         (target) => fileActions.exportPdf(ctxRef.current, target),
       )
-      window.slidesApi.headlessExportDone(report)
+      slidesPlatform().api.headlessExportDone(report)
     })()
   }, [])
 
@@ -1032,25 +1041,26 @@ export function App() {
     setPasteFloater(null) // The paste the floater refers to may have just been undone
     notesDraftRef.current = null // Undo overrides the unsaved draft, avoiding writing an old draft back
     setAnnotationsNonce((n) => n + 1) // Notes/comments aren't in RenderSlide; re-fetch
-    void window.slidesApi.isDirty().then(setDirty)
+    void slidesPlatform().api.isDirty().then(setDirty)
   }, [])
 
   const undo = useCallback(async () => {
     // Preserve native undo while typing. The cleared AI composer explicitly yields to deck undo.
     const target = document.activeElement as HTMLElement | null
-    if (editing || (isTextUndoTarget(target) && !shouldRouteUndoToDeck(target))) {
+    if (editing || (isTextUndoTarget(target) && !shouldRouteHistoryToDeck(target))) {
       document.execCommand('undo')
       return
     }
-    applyHistoryResult(await window.slidesApi.undo())
+    applyHistoryResult(await slidesPlatform().api.undo())
   }, [editing, applyHistoryResult])
 
   const redo = useCallback(async () => {
-    if (editing || inTextField()) {
+    const target = document.activeElement as HTMLElement | null
+    if (editing || (isTextUndoTarget(target) && !shouldRouteHistoryToDeck(target))) {
       document.execCommand('redo')
       return
     }
-    applyHistoryResult(await window.slidesApi.redo())
+    applyHistoryResult(await slidesPlatform().api.redo())
   }, [editing, applyHistoryResult])
 
   // Global shortcuts (keyboard-actions.ts): the handler reads the latest state via ctxRef, so attach once
@@ -1186,7 +1196,7 @@ export function App() {
   }, [hasDoc, viewMode, previewZoom, slides.length])
 
   const newBlank = useCallback(async () => {
-    const r = await window.slidesApi.newBlank(FIT_WIDTH)
+    const r = await slidesPlatform().api.newBlank(FIT_WIDTH)
     applyOpen(r)
     return r
   }, [applyOpen])
@@ -1205,8 +1215,8 @@ export function App() {
           showToast(err instanceof Error ? err.message : String(err), 'error')
         })
       })
-    const off = window.slidesApi.onOpened((r) => applyOpen(r))
-    consumePendingRef.current ??= window.slidesApi.consumePendingOpen(FIT_WIDTH)
+    const off = slidesPlatform().api.onOpened((r) => applyOpen(r))
+    consumePendingRef.current ??= slidesPlatform().api.consumePendingOpen(FIT_WIDTH)
     void consumePendingRef.current
       .then((r) => {
         if (bootHandledRef.current) return
@@ -1228,20 +1238,20 @@ export function App() {
   // whether it is still dirty rather than assuming
   useEffect(
     () =>
-      window.slidesApi.onRenamed((p) => {
+      slidesPlatform().api.onRenamed((p) => {
         setPath(p)
-        void window.slidesApi.isDirty().then(setDirty)
+        void slidesPlatform().api.isDirty().then(setDirty)
       }),
     [],
   )
 
   useEffect(() => {
-    void window.slidesApi.getAiSettings().then(setAiSettings)
+    void slidesPlatform().api.getAiSettings().then(setAiSettings)
   }, [])
 
   // Recent files for the start screen
   useEffect(() => {
-    if (slides.length === 0) void window.slidesApi.getRecentFiles().then(setRecent)
+    if (slides.length === 0) void slidesPlatform().api.getRecentFiles().then(setRecent)
   }, [slides.length])
 
   const toggleAi = useCallback(() => {
@@ -1443,8 +1453,8 @@ export function App() {
         return
       }
       effectsInFlight.current = true
-      void window.slidesApi
-        .setEffects({ slideIndex, sourceId: id, effects })
+      void slidesPlatform()
+        .api.setEffects({ slideIndex, sourceId: id, effects })
         .then((r) => r && applySlide(slideIndex, r))
         .finally(() => {
           effectsInFlight.current = false
@@ -1650,7 +1660,7 @@ export function App() {
   // Reflect the current page's transition effect on page/document changes
   useEffect(() => {
     if (!hasDoc) return
-    void window.slidesApi.getTransition(current).then(setTransition)
+    void slidesPlatform().api.getTransition(current).then(setTransition)
   }, [hasDoc, current, path])
 
   const applyTransition = useCallback(
@@ -1679,9 +1689,11 @@ export function App() {
       return
     }
     let cancelled = false
-    void window.slidesApi.getAnimations(current).then((items) => {
-      if (!cancelled) setAnimations(items)
-    })
+    void slidesPlatform()
+      .api.getAnimations(current)
+      .then((items) => {
+        if (!cancelled) setAnimations(items)
+      })
     return () => {
       cancelled = true
     }
@@ -1903,7 +1915,7 @@ export function App() {
     if (!hasDoc) return
     let cancelled = false
     void flushNotes()
-      .then(() => window.slidesApi.getNotes(current))
+      .then(() => slidesPlatform().api.getNotes(current))
       .then((t) => {
         if (!cancelled) setNotesText(t)
       })
@@ -1927,9 +1939,11 @@ export function App() {
       return
     }
     let cancelled = false
-    void window.slidesApi.getComments(current).then((c) => {
-      if (!cancelled) setComments(c)
-    })
+    void slidesPlatform()
+      .api.getComments(current)
+      .then((c) => {
+        if (!cancelled) setComments(c)
+      })
     return () => {
       cancelled = true
     }
@@ -1937,7 +1951,7 @@ export function App() {
 
   const addComment = useCallback(
     async (text: string) => {
-      const r = await window.slidesApi.addComment({ slideIndex: current, text })
+      const r = await slidesPlatform().api.addComment({ slideIndex: current, text })
       if (r) {
         setComments(r)
         setDirty(true)
@@ -1949,7 +1963,7 @@ export function App() {
 
   const deleteComment = useCallback(
     async (c: SlideComment) => {
-      const r = await window.slidesApi.deleteComment({
+      const r = await slidesPlatform().api.deleteComment({
         slideIndex: current,
         authorId: c.authorId,
         idx: c.idx,
@@ -1985,19 +1999,19 @@ export function App() {
     setEditingCell(null)
     setSelectedIds([])
     setCtxMenu(null)
-    const r = await window.slidesApi.masterEnter(FIT_WIDTH)
+    const r = await slidesPlatform().api.masterEnter(FIT_WIDTH)
     if (r?.items.length) setMasterItems(r.items)
   }, [hasDoc])
 
   const closeMasterView = useCallback(async () => {
-    const all = await window.slidesApi.masterClose()
+    const all = await slidesPlatform().api.masterClose()
     setMasterItems(null)
     if (all) {
       // The inheritance chain changed: replace the whole render tree (all-new element ids)
       setSlides(all)
       setSelectedIds([])
     }
-    void window.slidesApi.isDirty().then(setDirty)
+    void slidesPlatform().api.isDirty().then(setDirty)
   }, [])
 
   const zoomToFit = useCallback(() => {
@@ -2049,9 +2063,11 @@ export function App() {
       return
     }
     let alive = true
-    void window.slidesApi.getSections().then((r) => {
-      if (alive) setSections(r ?? [])
-    })
+    void slidesPlatform()
+      .api.getSections()
+      .then((r) => {
+        if (alive) setSections(r ?? [])
+      })
     return () => {
       alive = false
     }
@@ -2093,7 +2109,7 @@ export function App() {
       setSelectedIds([])
       setEditing(null)
     }
-    void window.slidesApi.hasSlideClipboard().then(setCanPasteSlide)
+    void slidesPlatform().api.hasSlideClipboard().then(setCanPasteSlide)
     setCtxMenu({ kind: 'thumb', x: e.clientX, y: e.clientY, index: i })
   }
 
@@ -2166,7 +2182,7 @@ export function App() {
       if (after) pos = i
     }
     if (pos < 0) pos = last + 1
-    void window.slidesApi.hasSlideClipboard().then(setCanPasteSlide)
+    void slidesPlatform().api.hasSlideClipboard().then(setCanPasteSlide)
     setCtxMenu({ kind: 'gap', x: e.clientX, y: e.clientY, pos })
   }
   const commitRenameSection = useCallback(
@@ -2193,7 +2209,7 @@ export function App() {
     (sourceId: string | null, x: number, y: number, cell?: { row: number; col: number }) => {
       if (editing) return
       // The clipboard may have been filled from another window (or externally) since our last copy
-      void window.slidesApi.clipboardProbe().then(setHasClipboard)
+      void slidesPlatform().api.clipboardProbe().then(setHasClipboard)
       if (sourceId) {
         setSelectedIds((prev) => (prev.includes(sourceId) ? prev : [sourceId]))
         setCtxMenu({ kind: 'element', x, y, targetId: sourceId, ...(cell ? { cell } : {}) })
@@ -2206,13 +2222,13 @@ export function App() {
   )
 
   const onTextContextMenu = useCallback((x: number, y: number, collapsed: boolean) => {
-    void window.slidesApi.clipboardProbe().then(setHasClipboard)
+    void slidesPlatform().api.clipboardProbe().then(setHasClipboard)
     setCtxMenu({ kind: 'text', x, y, collapsed })
   }, [])
 
   // Menu commands. Cut/copy/paste dispatch by context: text mode goes back to the native clipboard, canvas mode uses the element clipboard
   useEffect(() => {
-    return window.slidesApi.onMenuCommand((cmd) => {
+    return slidesPlatform().api.onMenuCommand((cmd) => {
       // Master view: only allow save (undo/clipboard etc. target normal pages, not applicable inside the master)
       if (masterItems) {
         if (cmd === 'save') void save()
@@ -2233,14 +2249,14 @@ export function App() {
       else if (cmd === 'redo') void redo()
       else if (cmd === 'cut') {
         if (editing || inTextField() || hasDomTextSelection())
-          void window.slidesApi.nativeClipboard('cut')
+          void slidesPlatform().api.nativeClipboard('cut')
         else void cutSelected()
       } else if (cmd === 'copy') {
         if (editing || inTextField() || hasDomTextSelection())
-          void window.slidesApi.nativeClipboard('copy')
+          void slidesPlatform().api.nativeClipboard('copy')
         else void copySelected()
       } else if (cmd === 'paste') {
-        if (editing || inTextField()) void window.slidesApi.nativeClipboard('paste')
+        if (editing || inTextField()) void slidesPlatform().api.nativeClipboard('paste')
         else void pasteClipboard()
       }
     })
@@ -2355,7 +2371,7 @@ export function App() {
   useEffect(() => setMediaPlay(null), [current])
   const startMediaPlayback = useCallback(
     async (sourceId: string) => {
-      const r = await window.slidesApi.getMediaData(current, sourceId)
+      const r = await slidesPlatform().api.getMediaData(current, sourceId)
       if (r) setMediaPlay({ sourceId, ...r })
     },
     [current],
@@ -2429,7 +2445,7 @@ export function App() {
   // PowerPoint drops a click-to-type text box the user leaves without typing
   const discardEmptyTextBox = useCallback(async () => {
     if (!editing) return
-    const updated = await window.slidesApi.deleteElement({
+    const updated = await slidesPlatform().api.deleteElement({
       slideIndex: current,
       sourceId: editing.sourceId,
     })
@@ -2442,7 +2458,7 @@ export function App() {
     async (paragraphs: EditParagraph[]) => {
       if (!editing) return
       if (editing.discardIfEmpty && paragraphsBlank(paragraphs)) return discardEmptyTextBox()
-      const updated = await window.slidesApi.editText({
+      const updated = await slidesPlatform().api.editText({
         slideIndex: current,
         sourceId: editing.sourceId,
         paragraphs,
@@ -2493,7 +2509,7 @@ export function App() {
       preview?: boolean,
       groupId?: string,
     ) => {
-      const updated = await window.slidesApi.editTransform({
+      const updated = await slidesPlatform().api.editTransform({
         slideIndex: current,
         sourceId,
         xPx: box.x,
@@ -2521,8 +2537,8 @@ export function App() {
       const now = performance.now()
       if (preview && now - adjustLastSent.current < 80) return
       adjustLastSent.current = now
-      void window.slidesApi
-        .setShapeAdjust({
+      void slidesPlatform()
+        .api.setShapeAdjust({
           slideIndex: current,
           sourceId,
           adjust,
@@ -2544,8 +2560,8 @@ export function App() {
   const sendEditPoints = useCallback((commit: EditPointsCommit, preview: boolean) => {
     editPointsPreview.current.note(commit, preview)
     const { slideIndex } = commit
-    void window.slidesApi
-      .setShapeGeometry({
+    void slidesPlatform()
+      .api.setShapeGeometry({
         slideIndex,
         sourceId: commit.sourceId,
         pathPx: commit.path,
@@ -2601,7 +2617,7 @@ export function App() {
         end?: { targetId: string; idx: number } | null
       },
     ) => {
-      const updated = await window.slidesApi.editConnectorEndpoints({
+      const updated = await slidesPlatform().api.editConnectorEndpoints({
         slideIndex: current,
         sourceId,
         x1Px: ep.x1,
@@ -2717,7 +2733,7 @@ export function App() {
   )
 
   const [selectedChartData, setSelectedChartData] = useState<Awaited<
-    ReturnType<typeof window.slidesApi.getChartData>
+    ReturnType<SlidesApi['getChartData']>
   > | null>(null)
   useEffect(() => {
     if (selectedNode?.type !== 'chart') {
@@ -2725,9 +2741,11 @@ export function App() {
       return
     }
     let alive = true
-    void window.slidesApi.getChartData(current, selectedNode.sourceId).then((d) => {
-      if (alive) setSelectedChartData(d)
-    })
+    void slidesPlatform()
+      .api.getChartData(current, selectedNode.sourceId)
+      .then((d) => {
+        if (alive) setSelectedChartData(d)
+      })
     return () => {
       alive = false
     }
@@ -2812,9 +2830,11 @@ export function App() {
     if (selectedNode?.type !== 'chart') return
     let stale = false
     // Optional call: degrade to the fixed palette when the preload build is too old, no blank screen
-    void window.slidesApi.getChartColorSchemes?.().then((r) => {
-      if (!stale && r) setChartColorSchemes(r)
-    })
+    void slidesPlatform()
+      .api.getChartColorSchemes?.()
+      .then((r) => {
+        if (!stale && r) setChartColorSchemes(r)
+      })
     return () => {
       stale = true
     }
@@ -3179,15 +3199,17 @@ export function App() {
         }
         onResetLayout={() => void slideActions.setSlideLayoutAt(ctxRef.current, current)}
         onSlideSize={(cx, cy) =>
-          void window.slidesApi.setSlideSize({ cx, cy }).then((all) => {
-            if (all) {
-              setSlides(all)
-              // Every slide re-materializes with fresh element ids
-              setSelectedIds([])
-              setEditing(null)
-              setDirty(true)
-            }
-          })
+          void slidesPlatform()
+            .api.setSlideSize({ cx, cy })
+            .then((all) => {
+              if (all) {
+                setSlides(all)
+                // Every slide re-materializes with fresh element ids
+                setSelectedIds([])
+                setEditing(null)
+                setDirty(true)
+              }
+            })
         }
         slideSizeKey={
           slide
@@ -3294,8 +3316,8 @@ export function App() {
             } else if (n.type === 'group') {
               for (const c of (n as GroupRenderNode).children) {
                 if (c.type === 'picture' || c.type === 'shape')
-                  void window.slidesApi
-                    .editStroke({
+                  void slidesPlatform()
+                    .api.editStroke({
                       slideIndex: current,
                       sourceId: c.sourceId,
                       stroke,
@@ -3309,8 +3331,8 @@ export function App() {
         onChangeShape={
           selectedNode?.type === 'shape' && !selectedNode.line
             ? (prst) => {
-                void window.slidesApi
-                  .changeShape({
+                void slidesPlatform()
+                  .api.changeShape({
                     slideIndex: current,
                     sourceId: selectedNode.sourceId,
                     prst,
@@ -3329,14 +3351,14 @@ export function App() {
               const st = shape.stroke
               const stroke = { color: s.stroke, widthPt: st?.widthPt ?? 1, dash: s.dash ?? 'solid' }
               if (groupId) {
-                const r1 = await window.slidesApi.editFill({
+                const r1 = await slidesPlatform().api.editFill({
                   slideIndex: current,
                   sourceId: shape.sourceId,
                   fill: s.fill,
                   groupId,
                 })
                 if (r1) applySlide(current, r1)
-                const r2 = await window.slidesApi.editStroke({
+                const r2 = await slidesPlatform().api.editStroke({
                   slideIndex: current,
                   sourceId: shape.sourceId,
                   stroke,
@@ -3369,7 +3391,7 @@ export function App() {
               } else if (n?.type === 'group') {
                 for (const c of (n as GroupRenderNode).children) {
                   if (c.type !== 'shape') continue
-                  const r = await window.slidesApi.editFill({
+                  const r = await slidesPlatform().api.editFill({
                     slideIndex: current,
                     sourceId: c.sourceId,
                     fill,
@@ -3396,7 +3418,7 @@ export function App() {
               }
             }
             if (targets.length === 0) return
-            const r = await window.slidesApi.editImageFill({
+            const r = await slidesPlatform().api.editImageFill({
               slideIndex: current,
               targets,
               mode,
@@ -3423,8 +3445,12 @@ export function App() {
         onPictureRotate={(delta) => void rotateSelected(delta)}
         onPictureOpacity={(opacity) => {
           if (!selectedNode || selectedNode.type !== 'picture') return
-          void window.slidesApi
-            .editPictureOpacity({ slideIndex: current, sourceId: selectedNode.sourceId, opacity })
+          void slidesPlatform()
+            .api.editPictureOpacity({
+              slideIndex: current,
+              sourceId: selectedNode.sourceId,
+              opacity,
+            })
             .then((r) => r && applySlide(current, r))
         }}
         onEditTableStyle={(op) => void onEditTableStyle(op)}
@@ -3438,10 +3464,10 @@ export function App() {
       />
 
       <div className="app-main">
-        {slide && viewMode !== 'reading' && viewMode !== 'sorter' && (
+        {slide && slidesPlatform().ai && viewMode !== 'reading' && viewMode !== 'sorter' && (
           <div className={`ai-dock${showAi && aiSettings ? '' : ' collapsed'}`}>
             {/* always mounted once settings load: collapse must not drop state or in-flight runs */}
-            {aiSettings ? (
+            {aiSettings && slidesPlatform().ai ? (
               <AiPanel
                 key={aiPanelKey}
                 slides={slides}
@@ -3811,57 +3837,59 @@ export function App() {
                             : undefined
                         }
                       >
-                        <div className="stage-ai-bar">
-                          <div className="stage-ai-group">
-                            <button
-                              className={`stage-ai-btn${showAi ? ' active' : ''}`}
-                              data-tip={t('aiOpenAssistant')}
-                              onClick={toggleAi}
-                            >
-                              <GensparkMark size={14} />
-                              <span>Genspark AI</span>
-                            </button>
-                            {/* Same one-click presets as the Home tab; hidden instead of
+                        {slidesPlatform().ai && (
+                          <div className="stage-ai-bar">
+                            <div className="stage-ai-group">
+                              <button
+                                className={`stage-ai-btn${showAi ? ' active' : ''}`}
+                                data-tip={t('aiOpenAssistant')}
+                                onClick={toggleAi}
+                              >
+                                <GensparkMark size={14} />
+                                <span>Genspark AI</span>
+                              </button>
+                              {/* Same one-click presets as the Home tab; hidden instead of
                         disabled while the deck has no real content */}
-                            {!deckEmpty && (
-                              <>
-                                <span className="stage-ai-divider" aria-hidden="true" />
-                                <button
-                                  className="stage-ai-btn"
-                                  data-tip={t('aiBeautifyBtn')}
-                                  onClick={() =>
-                                    pushAiPreset(
-                                      t('aiBeautifyPrompt'),
-                                      true,
-                                      undefined,
-                                      undefined,
-                                      true,
-                                    )
-                                  }
-                                >
-                                  <IconAiBeautify size={14} />
-                                  <span>{t('aiBeautifyBtn')}</span>
-                                </button>
-                                <button
-                                  className="stage-ai-btn"
-                                  data-tip={t('aiFactCheckBtn')}
-                                  onClick={() => pushAiPreset(t('aiFactCheckPrompt'))}
-                                >
-                                  <IconAiFactCheck size={14} />
-                                  <span>{t('aiFactCheckBtn')}</span>
-                                </button>
-                                <button
-                                  className="stage-ai-btn"
-                                  data-tip={t('aiImageBtn')}
-                                  onClick={() => pushAiPreset(t('aiImagePrompt'))}
-                                >
-                                  <IconAiImage size={14} />
-                                  <span>{t('aiImageBtn')}</span>
-                                </button>
-                              </>
-                            )}
+                              {!deckEmpty && (
+                                <>
+                                  <span className="stage-ai-divider" aria-hidden="true" />
+                                  <button
+                                    className="stage-ai-btn"
+                                    data-tip={t('aiBeautifyBtn')}
+                                    onClick={() =>
+                                      pushAiPreset(
+                                        t('aiBeautifyPrompt'),
+                                        true,
+                                        undefined,
+                                        undefined,
+                                        true,
+                                      )
+                                    }
+                                  >
+                                    <IconAiBeautify size={14} />
+                                    <span>{t('aiBeautifyBtn')}</span>
+                                  </button>
+                                  <button
+                                    className="stage-ai-btn"
+                                    data-tip={t('aiFactCheckBtn')}
+                                    onClick={() => pushAiPreset(t('aiFactCheckPrompt'))}
+                                  >
+                                    <IconAiFactCheck size={14} />
+                                    <span>{t('aiFactCheckBtn')}</span>
+                                  </button>
+                                  <button
+                                    className="stage-ai-btn"
+                                    data-tip={t('aiImageBtn')}
+                                    onClick={() => pushAiPreset(t('aiImagePrompt'))}
+                                  >
+                                    <IconAiImage size={14} />
+                                    <span>{t('aiImageBtn')}</span>
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </div>
-                        </div>
+                        )}
                         <div
                           ref={stageScaleRef}
                           className="stage-scale"
@@ -4229,8 +4257,8 @@ export function App() {
                     onSizeRequestDone={() => setFormatSizeNonce(0)}
                     onFill={(id, fill) => void onFill(id, fill)}
                     onImageFill={(id) =>
-                      void window.slidesApi
-                        .editImageFill({
+                      void slidesPlatform()
+                        .api.editImageFill({
                           slideIndex: current,
                           targets: [{ sourceId: id }],
                           mode: 'stretch',
@@ -4238,13 +4266,13 @@ export function App() {
                         .then((r) => r && applySlide(current, r))
                     }
                     onTextAnchor={(id, anchor) =>
-                      void window.slidesApi
-                        .setTextAnchor({ slideIndex: current, sourceId: id, anchor })
+                      void slidesPlatform()
+                        .api.setTextAnchor({ slideIndex: current, sourceId: id, anchor })
                         .then((r) => r && applySlide(current, r))
                     }
                     onTextBodyProps={(id, props) =>
-                      void window.slidesApi
-                        .setTextBodyProps({ slideIndex: current, sourceId: id, props })
+                      void slidesPlatform()
+                        .api.setTextBodyProps({ slideIndex: current, sourceId: id, props })
                         .then((r) => r && applySlide(current, r))
                     }
                     onEffects={(id, effects) => sendEffects(current, id, effects)}
@@ -4519,8 +4547,8 @@ export function App() {
           y={shapeGalleryAt.y}
           onPick={(prst) => {
             const { targetId } = shapeGalleryAt
-            void window.slidesApi
-              .changeShape({
+            void slidesPlatform()
+              .api.changeShape({
                 slideIndex: current,
                 sourceId: targetId,
                 prst,

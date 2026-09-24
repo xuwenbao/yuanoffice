@@ -3,7 +3,14 @@ import { describe, expect, it } from 'vitest'
 import { aiSettingsPath, proxyUrlFromEnv } from '../src/cloud'
 import { analysisText } from '../src/commands/media'
 import { resultCount } from '../src/commands/search'
-import { run } from './helpers'
+import { run as runCliCase } from './helpers'
+
+function run(argv: string[], opts: Parameters<typeof runCliCase>[1] = {}) {
+  return runCliCase(argv, {
+    ...opts,
+    env: { ...process.env, GENOFFICE_ENABLE_CLOUD: '1', ...opts.env },
+  })
+}
 
 describe('cloud command plumbing', () => {
   it('locates the shell ai-settings.json without Electron and honours the override', () => {
@@ -111,7 +118,9 @@ describe('cloud command plumbing', () => {
     expect(analysisText('{not json')).toBe('{not json')
   })
 
-  it('lists the cloud commands in help', async () => {
+  it('lists the cloud commands in help only when the build opts in', async () => {
+    const off = await runCliCase(['help'])
+    expect(off.stdout).not.toMatch(/^search\s/m)
     const r = await run(['help'])
     expect(r.stdout).toMatch(/\bsearch\b/)
     expect(r.stdout).toMatch(/\bimage\b/)

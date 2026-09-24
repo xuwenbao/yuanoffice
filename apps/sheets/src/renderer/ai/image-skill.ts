@@ -1,5 +1,6 @@
 import type { AgentSkill } from '@genoffice/agent-core'
 import { t } from '../i18n/locale'
+import { sheetsPlatform } from '../platform'
 
 /**
  * Image acquisition AgentSkill: image_search (shared main-process channel, same
@@ -79,7 +80,7 @@ export function createImageSkill(imageGen: () => boolean = () => true): AgentSki
             summary: t('aiToolImageSearch'),
           }
         }
-        const result = await window.desktopApi.imageSearch(
+        const result = await sheetsPlatform().api.imageSearch(
           query,
           Number(call.input.maxResults) || 8,
         )
@@ -108,7 +109,7 @@ export function createImageSkill(imageGen: () => boolean = () => true): AgentSki
           return { output: 'prompt must not be empty', isError: true, summary: t('aiToolGenImage') }
         }
         const aspectRatio = String(call.input.aspectRatio ?? '').trim()
-        const result = await window.desktopApi.generateImage({
+        const result = await sheetsPlatform().api.generateImage({
           prompt,
           ...(aspectRatio ? { aspectRatio } : {}),
         })

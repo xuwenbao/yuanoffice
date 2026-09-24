@@ -13,6 +13,7 @@ import { createPdfSkill } from './pdf-skill'
 import { createElectronTransport } from './transport'
 import { PDF_NAV_SCHEME, parsePdfNavHref } from './pdf-nav'
 import type { FileOpConfirm, PdfAiDeps, PdfAppDeps } from './tools'
+import { pdfPlatform } from '../platform'
 
 // Word-parity count (same as docs/markdown): Asian chars one by one + non-Asian words
 const ASIAN_RE =
@@ -255,8 +256,8 @@ export function AiPanel({
   useEffect(() => {
     let alive = true
     const refresh = () => {
-      void window.pdfApi
-        ?.gskStatus()
+      void pdfPlatform()
+        .api?.gskStatus()
         .then((s) => {
           if (alive) gskLoggedInRef.current = !!s?.loggedIn
         })
@@ -501,7 +502,7 @@ export function AiPanel({
     runMutatedRef.current = false
     void (async () => {
       try {
-        settingsRef.current = await window.pdfApi.getAiSettings()
+        settingsRef.current = await pdfPlatform().api.getAiSettings()
         await loop.run(instruction)
       } catch (err) {
         patchLast({
@@ -627,7 +628,7 @@ export function AiPanel({
         <div className="ai-panel-header-actions">
           <AiPanelSideButton
             lang={lang}
-            onMove={(side) => window.pdfApi.setAiPanelPrefs({ side })}
+            onMove={(side) => pdfPlatform().api.setAiPanelPrefs({ side })}
           />
           {chat.length > 0 && (
             <button

@@ -10,6 +10,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import type { PictureRenderNode, RenderSlide } from '@genoffice/pptx-render'
 import type { MediaCommand } from '../animation-play'
+import { slidesPlatform } from '../platform'
 
 export function ShowMediaLayer({
   slide,
@@ -46,9 +47,11 @@ export function ShowMediaLayer({
     setUrls({})
     setPlaying({})
     for (const n of nodes) {
-      void window.slidesApi.getMediaData(slideIndex, n.sourceId).then((d) => {
-        if (!cancelled && d) setUrls((u) => ({ ...u, [n.sourceId]: d }))
-      })
+      void slidesPlatform()
+        .api.getMediaData(slideIndex, n.sourceId)
+        .then((d) => {
+          if (!cancelled && d) setUrls((u) => ({ ...u, [n.sourceId]: d }))
+        })
     }
     return () => {
       cancelled = true

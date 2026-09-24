@@ -12,8 +12,12 @@ import {
 import { genofficeUserDataDir } from './gui'
 import { CliError, EXIT, type ErrorReason } from './result'
 
-/** The running shell's control endpoint, or null when no live shell published one. */
-export function controlEndpoint(env: NodeJS.ProcessEnv): ControlEndpoint | null {
+/**
+ * The running shell's control endpoint, or null when no live shell published one.
+ * `web` selects the browser control service; the default skips it so `open` and
+ * `selection` keep talking to the desktop shell when both are running.
+ */
+export function controlEndpoint(env: NodeJS.ProcessEnv, role?: 'web'): ControlEndpoint | null {
   const dirs = env.GENOFFICE_USER_DATA
     ? [env.GENOFFICE_USER_DATA]
     : [genofficeUserDataDir(env), `${genofficeUserDataDir(env)} Dev`]
@@ -29,6 +33,8 @@ export function controlEndpoint(env: NodeJS.ProcessEnv): ControlEndpoint | null 
       )
         continue
       if (!processAlive(raw.pid)) continue
+      const isWeb = raw.role === 'web'
+      if (role === 'web' ? !isWeb : isWeb) continue
       return raw as ControlEndpoint
     } catch {
       continue

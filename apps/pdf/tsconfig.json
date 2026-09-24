@@ -3,7 +3,13 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["node"]
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@genoffice/platform": ["../../packages/platform/src/index.ts"],
+      "@host": ["./src/renderer/host-electron.ts"],
+      "pdf-electron-platform": ["./src/renderer/platform-electron.ts"]
+    }
   },
   "include": [
     "src",

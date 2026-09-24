@@ -29,6 +29,7 @@ import {
   type ShowKeyState,
   type ShowScreen,
 } from '../show-keys'
+import { slidesPlatform } from '../platform'
 import { buildShowMenu } from '../show-menu'
 import {
   computePlayOrder,
@@ -126,22 +127,22 @@ export function SlideShowView({
 
   useEffect(() => {
     let cancelled = false
-    void Promise.all(slides.map((_, i) => window.slidesApi.getTransition(i))).then((kinds) => {
+    void Promise.all(slides.map((_, i) => slidesPlatform().api.getTransition(i))).then((kinds) => {
       if (!cancelled) transRef.current = kinds
     })
-    void Promise.all(slides.map((_, i) => window.slidesApi.getAnimations(i))).then((lists) => {
+    void Promise.all(slides.map((_, i) => slidesPlatform().api.getAnimations(i))).then((lists) => {
       if (!cancelled) setAllAnims(lists)
     })
-    void Promise.all(slides.map((_, i) => window.slidesApi.getShapeKeys(i))).then((keys) => {
+    void Promise.all(slides.map((_, i) => slidesPlatform().api.getShapeKeys(i))).then((keys) => {
       if (!cancelled) keysRef.current = keys
     })
-    void Promise.all(slides.map((_, i) => window.slidesApi.getSlideLinks(i))).then((lists) => {
+    void Promise.all(slides.map((_, i) => slidesPlatform().api.getSlideLinks(i))).then((lists) => {
       if (!cancelled)
         linksRef.current = lists.map(
           (list) => new Map(list.map(({ sourceId, target }) => [sourceId, target])),
         )
     })
-    void Promise.all(slides.map((_, i) => window.slidesApi.getRunLinks(i))).then((lists) => {
+    void Promise.all(slides.map((_, i) => slidesPlatform().api.getRunLinks(i))).then((lists) => {
       if (!cancelled)
         runLinksRef.current = lists.map(
           (list) =>
@@ -209,7 +210,7 @@ export function SlideShowView({
     // so it never lays out at the pre-snap size and re-jumps. On macOS HTML
     // fullscreen is skipped — it would only re-trigger the animated native
     // fullscreen. Stale preloads lack the API and keep the old animated behavior.
-    const snapped = window.slidesApi.setShowFullScreen?.(true) ?? Promise.resolve()
+    const snapped = slidesPlatform().api.setShowFullScreen?.(true) ?? Promise.resolve()
     void snapped
       .catch(() => {})
       .then(() => {
@@ -255,7 +256,7 @@ export function SlideShowView({
       window.clearTimeout(exitTimer)
       document.removeEventListener('fullscreenchange', onFsChange)
       if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
-      void window.slidesApi.setShowFullScreen?.(false)
+      void slidesPlatform().api.setShowFullScreen?.(false)
       liftShowCurtain()
     }
   }, [])

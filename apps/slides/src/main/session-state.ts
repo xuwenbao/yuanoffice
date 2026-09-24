@@ -13,7 +13,6 @@ import {
   parseTheme,
   resolveSchemeColor,
   type OpenedPptx,
-  type Slide,
 } from '@genoffice/pptx-engine'
 import {
   buildRenderSlide,
@@ -24,6 +23,11 @@ import { createSystemFontMetrics, resetFontRegistry } from './fonts'
 import { tiffToPng } from './tiff-decode'
 import { neutralizeJpegOrientation } from './jpeg-orientation'
 import { displayMime } from './media-mime'
+import { renderSlide, renderSlides } from '../domain/document'
+import { sessions, type HistorySnapshot, type OpLogEntry, type Session } from '../domain/session'
+
+export { sessions }
+export type { HistorySnapshot, OpLogEntry, Session }
 
 export interface RuntimePaths {
   preloadPath: string
@@ -46,48 +50,11 @@ export function configureSlidesRuntime(paths: RuntimePaths): void {
   runtime.openGeneratedPath = paths.openGeneratedPath
 }
 
-// One session per renderer process (standalone window or shell tab), keyed by webContents.id
-export interface Session {
-  path: string
-  opened: OpenedPptx
-  fitWidthPx: number
-  undoStack: HistorySnapshot[]
-  redoStack: HistorySnapshot[]
-  /** Nested history transaction used to collapse an AI tool/run into one undo step. */
-  historyBatch?: {
-    depth: number
-    undoStart: number
-    before: HistorySnapshot
-  }
-  /** Rollback points for the AI panel's Snapshots list, keyed by id (one per AI run that edited the deck). */
-  aiSnapshots?: Map<number, HistorySnapshot>
-  /** Edits that only touch archive entries (notes/comments; element-level dirty cannot detect them), reset after save */
-  metaDirty?: boolean
-  /** Transform preview gesture in progress (the first preview already pushed an undo snapshot; later previews/final commit do not) */
-  transformPreview?: boolean
-  /** The part currently edited in master view (exception to the fidelity rule: only that part is written back) */
-  masterEdit?: { partPath: string; slide: Slide } | null
-  /** A history-state notification is already queued for this session (coalesces per task) */
-  historyNotifyScheduled?: boolean
-  /** A deck-changed broadcast is already queued for this session (coalesces per task) */
-  deckBroadcastScheduled?: boolean
-  /** Monotonic sequence of the last journaled op entry (collab groundwork) */
-  opSeq?: number
-  /** Applied-op journal, capped ring — the attachment point for a future sync transport */
-  opLog?: OpLogEntry[]
-}
-export const sessions = new Map<number, Session>()
-
 // ── Op journal (collab groundwork) ──────────────────────────────────────
 // Every applied transaction appends its records here in order. Snapshot restores
 // (undo/redo/AI rollback) append a `reset` marker instead of inverse entries: a
 // consumer that cannot invert must full-resync past one. Payloads (e.g. picture
 // bytes) are kept verbatim; content-addressing them is the transport layer's job.
-export interface OpLogEntry {
-  seq: number
-  source: 'edit' | 'batch' | 'script' | 'generate' | 'reset'
-  ops: Array<{ op: { op: string; [k: string]: unknown }; slideId?: string; created?: string[] }>
-}
 const OP_LOG_MAX = 200
 
 export function journalOps(
@@ -119,13 +86,6 @@ export function journalOps(
 // archive.entries surgery), so history lives here too: snapshot both before every edit.
 // slides needs a deep copy (elements are mutated in place); entries only needs a shallow Map
 // copy (byte Buffers are never mutated in place, only replaced wholesale).
-export interface HistorySnapshot {
-  slides: Slide[]
-  entries: Map<string, Uint8Array>
-  size: { cx: number; cy: number }
-  /** archive-only edits (notes, theme) flag the session, so undo must restore that too */
-  metaDirty: boolean
-}
 const MAX_HISTORY = 50
 
 function trimHistory(stack: HistorySnapshot[]): void {
@@ -374,13 +334,11 @@ export function resetFontMetrics(): void {
 }
 
 export function buildAllRenderSlides(opened: OpenedPptx, fitWidthPx: number): RenderSlide[] {
-  return opened.deck.slides.map((s, i) =>
-    buildRenderSlide(s, opened.deck.size, {
-      fitWidthPx,
-      media: makeMediaResolver(opened, s.path),
-      metrics: getFontMetrics(),
-      slideNo: i + 1,
-    }),
+  return renderSlides(
+    opened,
+    fitWidthPx,
+    (slidePath) => makeMediaResolver(opened, slidePath),
+    getFontMetrics(),
   )
 }
 
@@ -472,12 +430,14 @@ export function makeMediaResolver(opened: OpenedPptx, slidePath?: string) {
 export function rebuildSlide(session: Session, slideIndex: number): RenderSlide | null {
   const slide = session.opened.deck.slides[slideIndex]
   if (!slide) return null
-  return buildRenderSlide(slide, session.opened.deck.size, {
-    fitWidthPx: session.fitWidthPx,
-    media: makeMediaResolver(session.opened, slide.path),
-    metrics: getFontMetrics(),
-    slideNo: slideIndex + 1,
-  })
+  return renderSlide(
+    session.opened,
+    slide,
+    session.fitWidthPx,
+    makeMediaResolver(session.opened, slide.path),
+    getFontMetrics(),
+    slideIndex + 1,
+  )
 }
 
 /**

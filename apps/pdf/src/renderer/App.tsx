@@ -16,6 +16,7 @@ import {
   renderPageForOcr,
   type OcrPageData,
 } from './ocr-layer'
+import { pdfPlatform } from './platform'
 import type { CropRect, FileOpCanceled, FileOpResult, PdfAppDeps, RotateDelta } from './ai/tools'
 import {
   MARKUP_COLORS,
@@ -378,7 +379,9 @@ export default function App() {
   /** OS account name; the default author of new note comments */
   const [noteAuthor, setNoteAuthor] = useState('')
   useEffect(() => {
-    window.pdfApi.getUsername().then(setNoteAuthor, () => {})
+    pdfPlatform()
+      .api.getUsername()
+      .then(setNoteAuthor, () => {})
   }, [])
   const [highlightColor, setHighlightColor] = useState<[number, number, number]>(
     MARKUP_COLORS.highlight,
@@ -656,8 +659,8 @@ export default function App() {
   /** Edit-font ids available on this machine (loaded once; empty until then) */
   const [editFonts, setEditFonts] = useState<string[]>([])
   useEffect(() => {
-    window.pdfApi
-      .listEditFonts()
+    pdfPlatform()
+      .api.listEditFonts()
       .then(setEditFonts)
       .catch(() => {
         /* dropdown simply stays at "original font" */
@@ -967,7 +970,7 @@ export default function App() {
       saved?: SavedSnapshot,
       waitForPageNos: number[] = [],
     ) => {
-      const data = await window.pdfApi.readFile(path)
+      const data = await pdfPlatform().api.readFile(path)
       const bytes = new Uint8Array(data)
       setFormHasXfa(hasXfaMarker(bytes))
       if (!saved) {
@@ -1018,7 +1021,7 @@ export default function App() {
         setFormCatalog({ widgets: [], fields: new Map(), byPage: new Map() })
       }
       try {
-        setSavedStaticFormFills(await window.pdfApi.listStaticFormFills(path))
+        setSavedStaticFormFills(await pdfPlatform().api.listStaticFormFills(path))
       } catch {
         setSavedStaticFormFills([])
       }
@@ -1278,7 +1281,7 @@ export default function App() {
 
   useEffect(() => {
     void (async () => {
-      const path = await window.pdfApi.consumePending()
+      const path = await pdfPlatform().api.consumePending()
       if (!path) {
         setStatus('empty')
         return
@@ -1654,7 +1657,7 @@ export default function App() {
 
   // Mirror dirty state to the main process (close-tab/close-window guard)
   useEffect(() => {
-    window.pdfApi.setDirty(dirty)
+    pdfPlatform().api.setDirty(dirty)
   }, [dirty])
 
   // Existing images are listed while edit-image mode is on; `doc` in the deps refreshes
@@ -1665,8 +1668,8 @@ export default function App() {
       return
     }
     let cancelled = false
-    window.pdfApi
-      .listPageImages(filePath)
+    pdfPlatform()
+      .api.listPageImages(filePath)
       .then((refs) => {
         if (!cancelled) setPageImages(refs)
       })
@@ -1923,7 +1926,7 @@ export default function App() {
         if (stale || !png) continue
         let lines: PdfOcrLine[] | null
         try {
-          lines = await window.pdfApi.ocrPage(png)
+          lines = await pdfPlatform().api.ocrPage(png)
         } catch {
           continue // this page failed; the rest may still recognize
         }
@@ -2621,8 +2624,8 @@ export default function App() {
         newText: oldText,
         fontSize: block.fontSize,
       }
-      void window.pdfApi
-        .validateTextEdits({ path: filePath, edits: [probe] })
+      void pdfPlatform()
+        .api.validateTextEdits({ path: filePath, edits: [probe] })
         .then(([v]) => {
           if (!v) return
           if (v.reason) {
@@ -2831,8 +2834,8 @@ export default function App() {
         newText: oldText,
         fontSize,
       }
-      void window.pdfApi
-        .validateTextEdits({ path: filePath, edits: [probe] })
+      void pdfPlatform()
+        .api.validateTextEdits({ path: filePath, edits: [probe] })
         .then(([v]) => {
           if (!v) return
           if (v.reason) {
@@ -3117,8 +3120,8 @@ export default function App() {
       dropping it immediately with a notice beats a save that silently skips it later. */
   const validateTextEdit = (edit: LocalTextEdit) => {
     if (!filePath) return
-    void window.pdfApi
-      .validateTextEdits({ path: filePath, edits: [edit.input] })
+    void pdfPlatform()
+      .api.validateTextEdits({ path: filePath, edits: [edit.input] })
       .then(([v]) => {
         // Stale result: the edit may have been saved or deleted while validation ran
         if (!v || !textEditsRef.current.some((e) => e.id === edit.id)) return
@@ -3451,7 +3454,10 @@ export default function App() {
     inFlightPageMapRef.current = snapshot.pageMap
     const run = (async (): Promise<boolean> => {
       setSaveState('saving')
-      const result = await window.pdfApi.save({ path: filePath, ...editsPayload(edits, noteFlush) })
+      const result = await pdfPlatform().api.save({
+        path: filePath,
+        ...editsPayload(edits, noteFlush),
+      })
       if (!result.ok) {
         opFailed(result.error)
         return false
@@ -3494,7 +3500,7 @@ export default function App() {
         ?.trim()
       if (nameCandidate) {
         try {
-          const renamed = await window.pdfApi.autoRename(filePath, nameCandidate)
+          const renamed = await pdfPlatform().api.autoRename(filePath, nameCandidate)
           if (renamed.renamed && renamed.path) setFilePath(renamed.path)
         } catch {
           /* naming is best-effort; the save itself already succeeded */
@@ -3599,7 +3605,7 @@ export default function App() {
           }
         : editsPayload(draftEdits, noteFlush)
     setSaveState('saving')
-    const result = await window.pdfApi.save({ path: filePath, targetPath, ...edits })
+    const result = await pdfPlatform().api.save({ path: filePath, targetPath, ...edits })
     if (!result.ok) {
       opFailed(result.error)
       return false
@@ -3667,8 +3673,8 @@ export default function App() {
     redactionApplyConfirmedRef.current = true
     redactionRequestInFlightRef.current = true
     setRedactionCopyInFlight(true)
-    void window.pdfApi
-      .requestRedactionCopy(filePath)
+    void pdfPlatform()
+      .api.requestRedactionCopy(filePath)
       .catch((err: unknown) => opFailed(err instanceof Error ? err.message : String(err)))
       .finally(() => {
         redactionRequestInFlightRef.current = false
@@ -3680,7 +3686,10 @@ export default function App() {
   // Autosave pauses while the shell's Save As flow is open: the save dialog blurs the
   // window, and the blur-triggered autosave would write the pending edits into the original
   const saveAsFlowRef = useRef(false)
-  useEffect(() => window.pdfApi.onSaveAsFlow((inFlight) => (saveAsFlowRef.current = inFlight)), [])
+  useEffect(
+    () => pdfPlatform().api.onSaveAsFlow((inFlight) => (saveAsFlowRef.current = inFlight)),
+    [],
+  )
 
   // Autosave (same strategy as Docs): every 30s and on window blur, silently persist pending
   // edits via the regular save() path; skipped while a save is in flight or without a file path.
@@ -3903,7 +3912,9 @@ export default function App() {
       // proves nothing about save: gate on an embeddable face NOW, keeping the dialog
       // open, instead of failing at save time ("could not be saved" long after typing).
       // An IPC error must not block inserting — the save path re-checks anyway.
-      const drawable = await window.pdfApi.canDrawText(text).catch(() => true)
+      const drawable = await pdfPlatform()
+        .api.canDrawText(text)
+        .catch(() => true)
       if (!drawable) {
         showNotice(t('textInsertNoFont'))
         return
@@ -4089,8 +4100,8 @@ export default function App() {
     if (existingPngFetches.current.has(key)) return
     existingPngFetches.current.add(key)
     const epoch = existingPngEpoch.current
-    void window.pdfApi
-      .pageImagePng({ path: filePath, pageIndex: ref.pageIndex, rect: ref.rect })
+    void pdfPlatform()
+      .api.pageImagePng({ path: filePath, pageIndex: ref.pageIndex, rect: ref.rect })
       .then((png) => {
         if (existingPngEpoch.current !== epoch) return
         if (png) setExistingPngs((prev) => new Map(prev).set(key, png))
@@ -4172,8 +4183,8 @@ export default function App() {
       },
     ])
     if (cached || plan.failures.length > 0) return
-    void window.pdfApi
-      .pageImagePng({ path: filePath, pageIndex: ref.pageIndex, rect: ref.rect })
+    void pdfPlatform()
+      .api.pageImagePng({ path: filePath, pageIndex: ref.pageIndex, rect: ref.rect })
       .then((png) => {
         if (png) setImageEdits((prev) => prev.map((e) => (e.id === id ? { ...e, png } : e)))
       })
@@ -4308,8 +4319,8 @@ export default function App() {
   /** The target's pixels in displayed orientation (pending quarter turns baked in) */
   const bakeSourcePng = async (target: ImageBakeTarget): Promise<string | null> => {
     const fetchPng = (pageIndex: number, rect: [number, number, number, number]) =>
-      window.pdfApi
-        .pageImagePng({ path: filePath, pageIndex, rect, scale: BAKE_SCALE })
+      pdfPlatform()
+        .api.pageImagePng({ path: filePath, pageIndex, rect, scale: BAKE_SCALE })
         .catch(() => null)
     if (target.kind === 'existing') return fetchPng(target.ref.pageIndex, target.ref.rect)
     const input = target.before
@@ -4724,8 +4735,8 @@ export default function App() {
       const key = `${job.rects.map(imageRectKey).join(';')}|${annotKey}|${textKey}|${clipKey}|${pxWidth}|${rotIdx}`
       if (livePreviewKeys.current.get(pageIndex) === key) continue
       livePreviewKeys.current.set(pageIndex, key)
-      void window.pdfApi
-        .pagePreviewPng({
+      void pdfPlatform()
+        .api.pagePreviewPng({
           path: filePath,
           pageIndex,
           excludeRects: job.rects,
@@ -4780,7 +4791,7 @@ export default function App() {
         }
         canvas.width = 0
         canvas.height = 0
-        const result = await window.pdfApi.exportImages({
+        const result = await pdfPlatform().api.exportImages({
           images,
           pageNumbers,
           baseName: fileName.replace(/\.pdf$/i, ''),
@@ -4989,7 +5000,7 @@ export default function App() {
     const first = visIdxs[0]! + 1
     const last = visIdxs[visIdxs.length - 1]! + 1
     return runFileOp(() =>
-      window.pdfApi.extractPages({
+      pdfPlatform().api.extractPages({
         path: filePath,
         pages: visIdxs,
         suggestedName: `${baseName()}-${first === last ? `p${first}` : `p${first}-${last}`}.pdf`,
@@ -4998,17 +5009,17 @@ export default function App() {
   }
   const insertBlankPageAt = (afterVisIdx: number) =>
     rewriteInPlace(() =>
-      window.pdfApi.insertBlankPage({ path: filePath, afterPageIndex: afterVisIdx }),
+      pdfPlatform().api.insertBlankPage({ path: filePath, afterPageIndex: afterVisIdx }),
     )
   const splitPdfToFolder = (chunkSize: number) =>
-    runFileOp(() => window.pdfApi.splitPdf({ path: filePath, chunkSize, baseName: baseName() }))
+    runFileOp(() => pdfPlatform().api.splitPdf({ path: filePath, chunkSize, baseName: baseName() }))
   const mergePagesToFile = (
     perSheet: number,
     direction: 'horizontal' | 'vertical',
     separator: boolean,
   ) =>
     runFileOp(() =>
-      window.pdfApi.mergePages({
+      pdfPlatform().api.mergePages({
         path: filePath,
         perSheet,
         direction,
@@ -5017,19 +5028,19 @@ export default function App() {
       }),
     )
   const replacePagesOnDisk = (visIdxs: number[]) =>
-    rewriteInPlace(() => window.pdfApi.replacePages({ path: filePath, pages: visIdxs }))
+    rewriteInPlace(() => pdfPlatform().api.replacePages({ path: filePath, pages: visIdxs }))
   const resizePages = (width: number, height: number) =>
-    rewriteInPlace(() => window.pdfApi.setPageSize({ path: filePath, width, height }))
+    rewriteInPlace(() => pdfPlatform().api.setPageSize({ path: filePath, width, height }))
   const splitPagesToFile = (perPage: 2 | 4 | 9) =>
     runFileOp(() =>
-      window.pdfApi.splitPages({
+      pdfPlatform().api.splitPages({
         path: filePath,
         perPage,
         suggestedName: `${baseName()}-split.pdf`,
       }),
     )
   const cropPagesOnDisk = (visIdxs: number[], rect: CropRect) =>
-    rewriteInPlace(() => window.pdfApi.cropPages({ path: filePath, pages: visIdxs, rect }))
+    rewriteInPlace(() => pdfPlatform().api.cropPages({ path: filePath, pages: visIdxs, rect }))
 
   const extractPage = (origIdx: number) => extractPagesToFile([visList.indexOf(origIdx)])
 
@@ -5052,7 +5063,10 @@ export default function App() {
 
   const insertPdf = (afterOrigIdx: number) =>
     flushThen(async () => {
-      const result = await window.pdfApi.insertPdf({ path: filePath, afterPageIndex: afterOrigIdx })
+      const result = await pdfPlatform().api.insertPdf({
+        path: filePath,
+        afterPageIndex: afterOrigIdx,
+      })
       if (!result.ok) {
         opFailed(result.error)
         return
@@ -5082,7 +5096,7 @@ export default function App() {
   const mergePdf = () =>
     flushThen(async () => {
       const base = fileName.replace(/\.pdf$/i, '')
-      const result = await window.pdfApi.mergePdf({
+      const result = await pdfPlatform().api.mergePdf({
         path: filePath,
         suggestedName: `${base}-merged.pdf`,
       })
@@ -5194,7 +5208,7 @@ export default function App() {
       await flushThen(async () => {
         setPrinting(true)
         try {
-          const data = await window.pdfApi.readFile(filePath)
+          const data = await pdfPlatform().api.readFile(filePath)
           const pdoc = await getDocument({ data: new Uint8Array(data), ...DOC_OPTS }).promise
           try {
             await printPdf(pdoc, pages)
@@ -5417,7 +5431,7 @@ export default function App() {
       let cover: [number, number, number, number] | undefined
       if (filePath) {
         try {
-          const [v] = await window.pdfApi.validateTextEdits({ path: filePath, edits: [input] })
+          const [v] = await pdfPlatform().api.validateTextEdits({ path: filePath, edits: [input] })
           if (v?.reason) return v.reason
           cover = v?.bounds
         } catch {
@@ -5447,7 +5461,10 @@ export default function App() {
       // rejection now instead of at save
       if (filePath && !(plan.kind === 'shift' && isBlockEditOf(te, block))) {
         try {
-          const [v] = await window.pdfApi.validateTextEdits({ path: filePath, edits: [te.input] })
+          const [v] = await pdfPlatform().api.validateTextEdits({
+            path: filePath,
+            edits: [te.input],
+          })
           if (v?.reason) return { reason: v.reason }
           if (v?.bounds) te = { ...te, cover: v.bounds }
         } catch {
@@ -5496,7 +5513,7 @@ export default function App() {
     metadata: () => metadataRef.current ?? docInfo,
     pageOrder: () => visListOf(orderRef.current),
     pageGeom: (origIdx) => (sizes[origIdx] ? pageGeom(origIdx) : null),
-    listImages: () => (filePath ? window.pdfApi.listPageImages(filePath) : Promise.resolve([])),
+    listImages: () => (filePath ? pdfPlatform().api.listPageImages(filePath) : Promise.resolve([])),
     isImageClaimed: isImageClaimedNow,
     insertImage: (origIdx, png, rect, layer) => {
       applyEditOpsRef.current([
@@ -5525,10 +5542,10 @@ export default function App() {
         },
       ])
     },
-    searchImages: (query, maxResults) => window.pdfApi.imageSearch(query, maxResults),
-    generateImage: (op) => window.pdfApi.generateImage(op),
+    searchImages: (query, maxResults) => pdfPlatform().api.imageSearch(query, maxResults),
+    generateImage: (op) => pdfPlatform().api.generateImage(op),
     fetchImage: async (url) => {
-      const fetched = await window.pdfApi.fetchImage(url)
+      const fetched = await pdfPlatform().api.fetchImage(url)
       if (!fetched) return null
       try {
         const bytes = Uint8Array.from(atob(fetched.base64), (c) => c.charCodeAt(0))
@@ -5546,7 +5563,7 @@ export default function App() {
     setStamps: (cfg) => {
       applyEditOpsRef.current([{ op: 'setStamps', cfg }])
     },
-    createDocument: (request) => window.pdfApi.createDocument(request),
+    createDocument: (request) => pdfPlatform().api.createDocument(request),
     insertBlankPage: insertBlankPageAt,
     setPageSize: resizePages,
     cropPages: cropPagesOnDisk,
@@ -5567,7 +5584,7 @@ export default function App() {
   const autoSaveAfterAiRun = async () => {
     if (!filePath || readOnly) return
     try {
-      if (!(await window.pdfApi.isUntitled(filePath))) return
+      if (!(await pdfPlatform().api.isUntitled(filePath))) return
     } catch {
       return
     }
@@ -5651,31 +5668,31 @@ export default function App() {
 
   // Main process picked "Save" in the close prompt → save and report the result
   useEffect(() => {
-    return window.pdfApi.onCloseSaveRequest(() => {
+    return pdfPlatform().api.onCloseSaveRequest(() => {
       if (redactions.length > 0) {
         showNotice(t('redactSaveAsHint'))
-        window.pdfApi.sendCloseSaveResult(false)
+        pdfPlatform().api.sendCloseSaveResult(false)
         return
       }
-      void save().then((ok) => window.pdfApi.sendCloseSaveResult(ok))
+      void save().then((ok) => pdfPlatform().api.sendCloseSaveResult(ok))
     })
   })
 
   // Shell menu Save As → write pending edits to the picked path only; the original file is never mutated
   useEffect(() => {
-    return window.pdfApi.onSaveAsRequest((targetPath) => {
+    return pdfPlatform().api.onSaveAsRequest((targetPath) => {
       void saveAsTo(targetPath)
         .catch((err: unknown) => {
           opFailed(err instanceof Error ? err.message : String(err))
           return false
         })
-        .then((ok) => window.pdfApi.sendSaveAsResult(ok))
+        .then((ok) => pdfPlatform().api.sendSaveAsResult(ok))
     })
   })
 
   // Shell menu Print → same dialog as the ribbon button / ⌘P
   useEffect(() => {
-    return window.pdfApi.onPrintRequest(openPrintDlg)
+    return pdfPlatform().api.onPrintRequest(openPrintDlg)
   })
 
   // Shortcuts: ⌘S/⌘F/⌘P/⌘±/⌘0 + page navigation (only ⌘ combos kept while an input control is focused)
@@ -5783,7 +5800,7 @@ export default function App() {
   }, [scale])
 
   // renamed / moved from the shell: keep saving to the file's new location
-  useEffect(() => window.pdfApi.onFileRenamed((next) => setFilePath(next)), [])
+  useEffect(() => pdfPlatform().api.onFileRenamed((next) => setFilePath(next)), [])
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
@@ -5867,7 +5884,7 @@ export default function App() {
     if (convertBusy) return
     setConvertBusy(true)
     try {
-      await window.pdfApi.convertOffice(format)
+      await pdfPlatform().api.convertOffice(format)
     } catch {
       // No shell conversion flow in standalone mode; shell-side errors show their own dialogs
     } finally {
@@ -6226,54 +6243,58 @@ export default function App() {
         <div className="ribbon-body" data-ribbon-body="">
           {ribbonTab === 'home' && (
             <>
-              {/* ---- Genspark AI (first slot: entry + one-click AI actions, docs parity) ---- */}
-              <div className="ribbon-group">
-                <div className="ribbon-group-items">
-                  <button
-                    className={`rb-big ai-entry${aiCollapsed ? '' : ' active'}`}
-                    data-tip={t('aiOpenAssistant')}
-                    onClick={() => setAiCollapsed((v) => !v)}
-                  >
-                    <span className="rb-big-icon">
-                      <GensparkMark size={26} />
-                    </span>
-                    <span>Genspark AI</span>
-                  </button>
-                  <button
-                    className="rb-big ai-entry"
-                    data-tip={t('aiSummarizeBtn')}
-                    onClick={() =>
-                      runAiPreset(
-                        t(aiSelection ? 'aiQuickSummarySelPrompt' : 'aiQuickSummaryPrompt'),
-                      )
-                    }
-                  >
-                    <span className="rb-big-icon">
-                      <span className="ai-feature-icon" aria-hidden="true">
-                        <IconAiSummarize />
-                      </span>
-                    </span>
-                    <span>{t('aiSummarizeBtn')}</span>
-                  </button>
-                  <button
-                    className="rb-big ai-entry"
-                    data-tip={t('aiKeyPointsBtn')}
-                    onClick={() =>
-                      runAiPreset(
-                        t(aiSelection ? 'aiQuickKeyPointsSelPrompt' : 'aiQuickKeyPointsPrompt'),
-                      )
-                    }
-                  >
-                    <span className="rb-big-icon">
-                      <span className="ai-feature-icon" aria-hidden="true">
-                        <IconAiKeyPoints />
-                      </span>
-                    </span>
-                    <span>{t('aiKeyPointsBtn')}</span>
-                  </button>
-                </div>
-              </div>
-              <div className="ribbon-sep" />
+              {pdfPlatform().ai && (
+                <>
+                  {/* ---- Genspark AI (first slot: entry + one-click AI actions, docs parity) ---- */}
+                  <div className="ribbon-group">
+                    <div className="ribbon-group-items">
+                      <button
+                        className={`rb-big ai-entry${aiCollapsed ? '' : ' active'}`}
+                        data-tip={t('aiOpenAssistant')}
+                        onClick={() => setAiCollapsed((v) => !v)}
+                      >
+                        <span className="rb-big-icon">
+                          <GensparkMark size={26} />
+                        </span>
+                        <span>Genspark AI</span>
+                      </button>
+                      <button
+                        className="rb-big ai-entry"
+                        data-tip={t('aiSummarizeBtn')}
+                        onClick={() =>
+                          runAiPreset(
+                            t(aiSelection ? 'aiQuickSummarySelPrompt' : 'aiQuickSummaryPrompt'),
+                          )
+                        }
+                      >
+                        <span className="rb-big-icon">
+                          <span className="ai-feature-icon" aria-hidden="true">
+                            <IconAiSummarize />
+                          </span>
+                        </span>
+                        <span>{t('aiSummarizeBtn')}</span>
+                      </button>
+                      <button
+                        className="rb-big ai-entry"
+                        data-tip={t('aiKeyPointsBtn')}
+                        onClick={() =>
+                          runAiPreset(
+                            t(aiSelection ? 'aiQuickKeyPointsSelPrompt' : 'aiQuickKeyPointsPrompt'),
+                          )
+                        }
+                      >
+                        <span className="rb-big-icon">
+                          <span className="ai-feature-icon" aria-hidden="true">
+                            <IconAiKeyPoints />
+                          </span>
+                        </span>
+                        <span>{t('aiKeyPointsBtn')}</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="ribbon-sep" />
+                </>
+              )}
               {markupGroup}
               <div className="ribbon-sep" />
               {/* Edit entries lead; Search moved after page/zoom (⌘F is the common path) */}
@@ -6355,36 +6376,40 @@ export default function App() {
           )}
           {ribbonTab === 'annotate' && (
             <>
-              <div className="ribbon-group">
-                <div className="ribbon-group-items">
-                  <button
-                    className="rb-big ai-entry"
-                    data-tip={t('aiReviewSummaryBtn')}
-                    onClick={() => runAiPreset(t('aiReviewSummaryPrompt'))}
-                  >
-                    <span className="rb-big-icon">
-                      <span className="ai-feature-icon" aria-hidden="true">
-                        <IconAiSummarize />
-                      </span>
-                    </span>
-                    <span>{t('aiReviewSummaryBtn')}</span>
-                  </button>
-                  <button
-                    className="rb-big ai-entry"
-                    disabled={readOnly}
-                    data-tip={t('aiProcessNotesBtn')}
-                    onClick={() => runAiPreset(t('aiProcessNotesPrompt'))}
-                  >
-                    <span className="rb-big-icon">
-                      <span className="ai-feature-icon" aria-hidden="true">
-                        <GensparkMark size={20} />
-                      </span>
-                    </span>
-                    <span>{t('aiProcessNotesBtn')}</span>
-                  </button>
-                </div>
-              </div>
-              <div className="ribbon-sep" />
+              {pdfPlatform().ai && (
+                <>
+                  <div className="ribbon-group">
+                    <div className="ribbon-group-items">
+                      <button
+                        className="rb-big ai-entry"
+                        data-tip={t('aiReviewSummaryBtn')}
+                        onClick={() => runAiPreset(t('aiReviewSummaryPrompt'))}
+                      >
+                        <span className="rb-big-icon">
+                          <span className="ai-feature-icon" aria-hidden="true">
+                            <IconAiSummarize />
+                          </span>
+                        </span>
+                        <span>{t('aiReviewSummaryBtn')}</span>
+                      </button>
+                      <button
+                        className="rb-big ai-entry"
+                        disabled={readOnly}
+                        data-tip={t('aiProcessNotesBtn')}
+                        onClick={() => runAiPreset(t('aiProcessNotesPrompt'))}
+                      >
+                        <span className="rb-big-icon">
+                          <span className="ai-feature-icon" aria-hidden="true">
+                            <GensparkMark size={20} />
+                          </span>
+                        </span>
+                        <span>{t('aiProcessNotesBtn')}</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="ribbon-sep" />
+                </>
+              )}
               {markupGroup}
               <div className="ribbon-sep" />
               <div className="ribbon-group">
@@ -6550,19 +6575,21 @@ export default function App() {
             <>
               <div className="ribbon-group">
                 <div className="ribbon-group-items">
-                  <button
-                    className="rb-big ai-entry"
-                    disabled={readOnly}
-                    data-tip={t('aiFillFormBtn')}
-                    onClick={() => runAiPreset(t('aiFillFormPrompt'))}
-                  >
-                    <span className="rb-big-icon">
-                      <span className="ai-feature-icon" aria-hidden="true">
-                        <GensparkMark size={20} />
+                  {pdfPlatform().ai && (
+                    <button
+                      className="rb-big ai-entry"
+                      disabled={readOnly}
+                      data-tip={t('aiFillFormBtn')}
+                      onClick={() => runAiPreset(t('aiFillFormPrompt'))}
+                    >
+                      <span className="rb-big-icon">
+                        <span className="ai-feature-icon" aria-hidden="true">
+                          <GensparkMark size={20} />
+                        </span>
                       </span>
-                    </span>
-                    <span>{t('aiFillFormBtn')}</span>
-                  </button>
+                      <span>{t('aiFillFormBtn')}</span>
+                    </button>
+                  )}
                   <button
                     className={`rb-big${pendingStaticFill === 'text' ? ' active' : ''}`}
                     disabled={readOnly}
@@ -6883,26 +6910,28 @@ export default function App() {
       <div className="app-main">
         {/* dock wrapper animates the width between panel and rail (docs-style 180ms ease);
             the panel stays mounted while collapsed so the chat history survives */}
-        <div className={`ai-dock${aiCollapsed ? ' collapsed' : ''}`}>
-          {aiCollapsed && (
-            <button
-              className="ai-rail"
-              data-tip={t('aiOpenAssistant')}
-              aria-label={t('aiOpenAssistant')}
-              onClick={() => setAiCollapsed(false)}
-            >
-              <GensparkMark size={22} />
-            </button>
-          )}
-          <AiPanel
-            api={aiApi}
-            filePath={filePath}
-            preset={aiPreset}
-            onCollapse={() => setAiCollapsed(true)}
-            onRunDone={() => void autoSaveAfterAiRun()}
-            onClearSelection={() => setAiSelection(null)}
-          />
-        </div>
+        {pdfPlatform().ai && (
+          <div className={`ai-dock${aiCollapsed ? ' collapsed' : ''}`}>
+            {aiCollapsed && (
+              <button
+                className="ai-rail"
+                data-tip={t('aiOpenAssistant')}
+                aria-label={t('aiOpenAssistant')}
+                onClick={() => setAiCollapsed(false)}
+              >
+                <GensparkMark size={22} />
+              </button>
+            )}
+            <AiPanel
+              api={aiApi}
+              filePath={filePath}
+              preset={aiPreset}
+              onCollapse={() => setAiCollapsed(true)}
+              onRunDone={() => void autoSaveAfterAiRun()}
+              onClearSelection={() => setAiSelection(null)}
+            />
+          </div>
+        )}
         <div className="app-content">
           <div className="pdf-body">
             {sidebar === 'outline' && outline && (

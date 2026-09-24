@@ -3,6 +3,7 @@ import type { ChangeEvent, PointerEvent as ReactPointerEvent, ReactElement } fro
 import { cssRgb } from './DrawLayer'
 import type { TFunc } from './i18n/locale'
 import type { SavedSignature, SignatureData, SignatureStrokes } from '../shared/ipc'
+import { pdfPlatform } from './platform'
 
 export type { SignatureData, SignatureStrokes }
 
@@ -163,8 +164,8 @@ export function SignatureDialog({
 
   useEffect(() => {
     let alive = true
-    window.pdfApi
-      .listSavedSignatures()
+    pdfPlatform()
+      .api.listSavedSignatures()
       .then((list) => {
         if (alive) setSaved(list)
       })
@@ -176,7 +177,9 @@ export function SignatureDialog({
 
   const removeSaved = (id: string) => {
     setSaved((prev) => prev.filter((s) => s.id !== id))
-    window.pdfApi.removeSavedSignature(id).catch(() => {})
+    pdfPlatform()
+      .api.removeSavedSignature(id)
+      .catch(() => {})
   }
 
   /** Processed image + preview data URL, recomputed when the source or the B&W toggle changes */
@@ -240,7 +243,10 @@ export function SignatureDialog({
 
   /** New signature confirmed: persist it for reuse (unless opted out), then hand off to placement */
   const finish = (sig: SignatureData) => {
-    if (saveForReuse) window.pdfApi.addSavedSignature(sig).catch(() => {})
+    if (saveForReuse)
+      pdfPlatform()
+        .api.addSavedSignature(sig)
+        .catch(() => {})
     onConfirm(sig)
   }
 

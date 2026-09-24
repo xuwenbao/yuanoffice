@@ -434,7 +434,9 @@ export const TOOLS: ToolSpec[] = [
 ]
 
 export function resolveTools(registry: CommandRegistry): ResolvedTool[] {
-  return TOOLS.map((tool) => resolveTool(tool, registry))
+  return TOOLS.filter((tool) => registry.get(tool.command)).map((tool) =>
+    resolveTool(tool, registry),
+  )
 }
 
 export function resolveTool(tool: ToolSpec, registry: CommandRegistry): ResolvedTool {

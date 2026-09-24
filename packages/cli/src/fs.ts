@@ -165,7 +165,7 @@ export function resolveOutput(
       suggestion: 'pass --force to overwrite, or choose another --out',
     })
   }
-  if (!opts.force) assertNotOpenInGui(abs, ctx.env)
+  assertNotOpenInGui(abs, ctx.env, opts.force === true)
   mkdirSync(dirname(abs), { recursive: true })
   return abs
 }

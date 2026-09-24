@@ -37,6 +37,7 @@ import {
 import { settleVisualNodes, snapshotPrintVisuals } from './print-visuals'
 import { installedVisualFrames, type InstalledVisualFrame } from './WorkbookVisuals'
 import type { LazyWorkbookState, UniverRuntime } from './univer-state'
+import { sheetsPlatform } from './platform'
 
 const PAPER_NAMES: Record<string, string> = {
   1: 'Letter',
@@ -409,7 +410,7 @@ export async function handleExportPdf(ctx: PageLayoutContext, outPath?: string):
       preparing: t('appPdfRendering'),
     })
     if (!payload) return false
-    const result = await window.desktopApi.exportPdf({
+    const result = await sheetsPlatform().api.exportPdf({
       ...payload,
       ...(outPath ? { outPath } : {}),
     })
@@ -431,7 +432,7 @@ export async function handlePrint(ctx: PageLayoutContext): Promise<boolean> {
       preparing: t('appPrintPreparing'),
     })
     if (!payload) return false
-    const result = await window.desktopApi.printWorkbook(payload)
+    const result = await sheetsPlatform().api.printWorkbook(payload)
     if (result.ok) ctx.setMessage(t('appPrintSent'))
     else ctx.setMessage(result.error === undefined ? t('appPrintCanceled') : t('appPrintFailed'))
     return result.ok
@@ -483,7 +484,7 @@ async function loadHeaderFooterPictures(
   await Promise.all(
     slots.map(async (slot) => {
       try {
-        const media = await window.desktopApi.readWorkbookMedia({ sessionId, visualId: slot.id })
+        const media = await sheetsPlatform().api.readWorkbookMedia({ sessionId, visualId: slot.id })
         const dataUrl = isMetafileMime(media.mediaType)
           ? await metafileToDataUrl(base64ToBytes(media.base64), media.mediaType)
           : `data:${media.mediaType};base64,${media.base64}`

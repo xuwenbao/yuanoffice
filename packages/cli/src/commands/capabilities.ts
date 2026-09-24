@@ -23,6 +23,19 @@ export const capabilitiesCommand: CommandDef = {
     'Report which cloud features (search, image search, image generation, media analysis) are configured in GenOffice, and whether the app is installed.',
   usage: 'capabilities',
   async run(_args, ctx) {
+    if (ctx.env.GENOFFICE_ENABLE_CLOUD !== '1') {
+      const off = { available: false, via: null, reason: 'disabled' }
+      return {
+        summary: 'cloud features are disabled in this build',
+        detail: {
+          search: off,
+          image_search: off,
+          image_generation: off,
+          media_analysis: off,
+          app: { available: false },
+        },
+      }
+    }
     await prepareCloud(ctx.env)
     const settings = readAiSettingsFile(aiSettingsPath(ctx.env))
     const gsk = hasGskAuth() && cloudToolsEnabled(settings)

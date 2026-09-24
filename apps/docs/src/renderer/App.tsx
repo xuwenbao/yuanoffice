@@ -1,3 +1,4 @@
+import { docsPlatform } from './platform'
 import { scriptFontHtml } from './editor/script-fonts'
 import { DOC_CSS_COMMITTED_EVENT } from './editor/cjk-punct-shrink'
 import { justifyShrinkPluginKey } from './editor/justify-shrink'
@@ -944,7 +945,7 @@ export function App() {
     otherName: string
     entries: CompareEntry[]
   } | null>(null)
-  const [autoSave, setAutoSave] = useAutoSavePref('aidocs.autoSave', window.desktop)
+  const [autoSave, setAutoSave] = useAutoSavePref('aidocs.autoSave', docsPlatform().api)
   // tab closed but this renderer kept alive (shell freeze workaround): go inert
   const [tornDown, setTornDown] = useState(false)
   const [aiPreset, setAiPreset] = useState<{
@@ -996,8 +997,8 @@ export function App() {
   } | null>(null)
   const [ctxMenu, setCtxMenu] = useState<ContextMenuState | null>(null)
   const [viewImage, setViewImage] = useState<string | null>(null)
-  useEffect(() => window.desktop.onViewImage?.((src) => setViewImage(src)), [])
-  const saveImageAs = useCallback((src: string) => void window.desktop.saveImageAs(src), [])
+  useEffect(() => docsPlatform().api.onViewImage?.((src) => setViewImage(src)), [])
+  const saveImageAs = useCallback((src: string) => void docsPlatform().api.saveImageAs(src), [])
   const [showFontDialog, setShowFontDialog] = useState(false)
   const [showParaDialog, setShowParaDialog] = useState(false)
   const [, forceRender] = useReducer((x: number) => x + 1, 0)
@@ -1203,7 +1204,7 @@ export function App() {
             for (const src of htmlImgSrcs.slice(0, 10)) {
               const ed = editorRef.current
               if (!ed) return
-              const fetched = await window.desktop.fetchImage(src)
+              const fetched = await docsPlatform().api.fetchImage(src)
               if (fetched) {
                 await insertImageFromDataUrl(
                   ed,
@@ -1278,8 +1279,8 @@ export function App() {
   )
 
   useEffect(() => {
-    void window.desktop.getRecentFiles().then(setRecent)
-    void window.desktop.getAiSettings().then(setSettings)
+    void docsPlatform().api.getRecentFiles().then(setRecent)
+    void docsPlatform().api.getAiSettings().then(setSettings)
   }, [])
 
   useEffect(() => {
@@ -1297,7 +1298,7 @@ export function App() {
   // userData/spell-diag.log for support to collect (never breaks the app)
   const spellDiag = (line: string) => {
     try {
-      window.desktop.spellDiag?.(line)
+      docsPlatform().api.spellDiag?.(line)
     } catch {
       /* diagnostics only */
     }
@@ -1440,8 +1441,8 @@ export function App() {
           const ch = node.data[after.anchorOffset - 1]
           if (ch === ' ' || ch === '\u00a0') node.deleteData(after.anchorOffset - 1, 1)
         }
-        void window.desktop
-          .respellKick()
+        void docsPlatform()
+          .api.respellKick()
           .catch(() => undefined)
           .then(async () => {
             try {
@@ -1620,12 +1621,12 @@ export function App() {
     document.title = doc ? doc.fileName : 'GenOffice Docs'
   }, [doc])
 
-  useEffect(() => window.desktop.onTeardown?.(() => setTornDown(true)), [])
+  useEffect(() => docsPlatform().api.onTeardown?.(() => setTornDown(true)), [])
 
   // keep the native View menu's checkmarks (AI Sidebar / Dark Mode) in sync
   // (the IPC field keeps its historical darkCanvas name)
   useEffect(() => {
-    window.desktop.reportViewMenuState?.({ aiSidebar: showAi, darkCanvas: darkPage })
+    docsPlatform().api.reportViewMenuState?.({ aiSidebar: showAi, darkCanvas: darkPage })
   }, [showAi, darkPage])
 
   // Crash-recovery copy: while the document is dirty, push a serialized
@@ -1854,7 +1855,7 @@ export function App() {
   // file renamed externally (renamed in the shell Home list) → sync the save path and title-bar file name (content unchanged)
   useEffect(
     () =>
-      window.desktop.onRenamedDocx(({ oldPath, newPath }) => {
+      docsPlatform().api.onRenamedDocx(({ oldPath, newPath }) => {
         setDoc((prev) =>
           prev && prev.filePath === oldPath
             ? {
@@ -1870,7 +1871,7 @@ export function App() {
 
   useEffect(() => {
     if (!editor) return
-    const unsubscribe = window.desktop.onOpenDocx((result) => {
+    const unsubscribe = docsPlatform().api.onOpenDocx((result) => {
       void loadFile(result)
     })
     // With no pending file the window lands directly in the editor on a blank document
@@ -1878,10 +1879,10 @@ export function App() {
     // effect twice but the pending queues can only be consumed once, so the consume
     // Promise lives in a ref and its result is processed only once.
     bootPendingRef.current ??= Promise.all([
-      window.desktop.consumePendingOpenDocx(),
+      docsPlatform().api.consumePendingOpenDocx(),
       // Still consume the one-shot new-blank flag so it doesn't leak into the next open
-      window.desktop.consumeNewBlankDoc(),
-      window.desktop.consumeAiDocContent(),
+      docsPlatform().api.consumeNewBlankDoc(),
+      docsPlatform().api.consumeAiDocContent(),
     ])
     void bootPendingRef.current
       .then(async ([pending, , aiContent]) => {
@@ -1915,7 +1916,7 @@ export function App() {
   }, [editor, loadFile])
 
   const openFile = useCallback(async () => {
-    await loadFile(await window.desktop.openDocx())
+    await loadFile(await docsPlatform().api.openDocx())
   }, [loadFile])
 
   /** new document from the built-in blank template (AI can then generate into it) */
@@ -1923,7 +1924,7 @@ export function App() {
 
   const openRecent = useCallback(
     async (path: string) => {
-      await loadFile(await window.desktop.openDocxPath(path))
+      await loadFile(await docsPlatform().api.openDocxPath(path))
     },
     [loadFile],
   )
@@ -1932,7 +1933,7 @@ export function App() {
   const submitDocPwd = async () => {
     if (!docPwdPrompt || docPwdPrompt.busy || !docPwdPrompt.value) return
     setDocPwdPrompt({ ...docPwdPrompt, busy: true, errorKey: '' })
-    const res = await window.desktop.openDocxDecrypt(docPwdPrompt.path, docPwdPrompt.value)
+    const res = await docsPlatform().api.openDocxDecrypt(docPwdPrompt.path, docPwdPrompt.value)
     if (res.ok) {
       setDocPwdPrompt(null)
       await loadFile(res.result)
@@ -1958,7 +1959,10 @@ export function App() {
     let changed = false
     if (result.openPassword !== undefined) {
       const cur = fileCtxRef.current.doc
-      const res = await window.desktop.setDocPassword(cur?.filePath ?? null, result.openPassword)
+      const res = await docsPlatform().api.setDocPassword(
+        cur?.filePath ?? null,
+        result.openPassword,
+      )
       if (res.ok) {
         setDoc((d) => (d ? { ...d, encrypted: !!result.openPassword } : d))
         // the on-disk file only changes on the next save
@@ -2250,7 +2254,7 @@ export function App() {
 
   useEffect(
     () =>
-      window.desktop.onZoteroRequest(async (request) => {
+      docsPlatform().api.onZoteroRequest(async (request) => {
         try {
           const activeEditor = editorRef.current
           if (!activeEditor) throw new Error('No active GenOffice document')
@@ -2265,9 +2269,9 @@ export function App() {
             })
           zoteroControllerRef.current = controller
           const result = await controller.handle(request)
-          window.desktop.respondToZotero({ requestId: request.requestId, ok: true, result })
+          docsPlatform().api.respondToZotero({ requestId: request.requestId, ok: true, result })
         } catch (error) {
-          window.desktop.respondToZotero({
+          docsPlatform().api.respondToZotero({
             requestId: request.requestId,
             ok: false,
             error: error instanceof Error ? error.message : String(error),
@@ -2370,7 +2374,7 @@ export function App() {
     if (headlessExportStartedRef.current) return
     headlessExportStartedRef.current = true
     void (async () => {
-      const target = await window.desktop.consumeHeadlessExport()
+      const target = await docsPlatform().api.consumeHeadlessExport()
       if (!target) return
       const report = await runHeadlessDocumentExport(
         target.outPath,
@@ -2383,7 +2387,7 @@ export function App() {
         },
         target.format === 'html' ? exportHtml : exportPdf,
       )
-      window.desktop.headlessExportDone(report)
+      docsPlatform().api.headlessExportDone(report)
     })()
   }, [exportPdf, exportHtml])
 
@@ -4703,14 +4707,14 @@ export function App() {
 
   // close guard: the main process queries dirty state before closing a tab/window; choosing "Save" runs a full save and reports back
   useEffect(() => {
-    const offCheck = window.desktop.onCloseCheck?.(() => {
-      window.desktop.reportCloseCheck({
+    const offCheck = docsPlatform().api.onCloseCheck?.(() => {
+      docsPlatform().api.reportCloseCheck({
         dirty: !!doc && (anyDirtyRef.current || dirtyRef.current),
         autoSave: autoSave && !!doc?.filePath,
         filePath: doc?.filePath ?? null,
       })
     })
-    const offSave = window.desktop.onCloseSaveRequest?.(() => {
+    const offSave = docsPlatform().api.onCloseSaveRequest?.(() => {
       // Closing must not report success while edits are still unpersisted, so a
       // save that raced with typing is retried until the file catches up.
       // save(false) never prompts — a pathless first save lands silently in the
@@ -4721,8 +4725,8 @@ export function App() {
         wasIncomplete: () => saveIncompleteRef.current,
         hasPath: () => true,
       }).then(
-        (ok) => window.desktop.reportCloseSaveResult(ok === true),
-        () => window.desktop.reportCloseSaveResult(false),
+        (ok) => docsPlatform().api.reportCloseSaveResult(ok === true),
+        () => docsPlatform().api.reportCloseSaveResult(false),
       )
     })
     return () => {
@@ -5019,7 +5023,7 @@ export function App() {
 
   // native application menu → renderer commands
   useEffect(() => {
-    return window.desktop.onMenuCommand((command, payload) => {
+    return docsPlatform().api.onMenuCommand((command, payload) => {
       const align = (value: 'left' | 'center' | 'right' | 'justify') =>
         editor && setSelectionAlign(editor, value)
       switch (command) {
@@ -6059,7 +6063,7 @@ export function App() {
       />
 
       <div className="app-main">
-        {doc && (
+        {doc && docsPlatform().ai && (
           <div className={`ai-dock${showAi ? '' : ' collapsed'}`}>
             {/* always mounted: collapse must not drop state or in-flight runs */}
             <AiPanel

@@ -1,3 +1,4 @@
+import { docsPlatform } from '../platform'
 import { useRef, useState } from 'react'
 import type { Editor, JSONContent } from '@tiptap/core'
 import { TextSelection } from '@tiptap/pm/state'
@@ -317,7 +318,7 @@ export async function insertImageFromDataUrl(
 }
 
 export async function insertImageViaDialog(editor: Editor): Promise<void> {
-  const picked = await window.desktop.pickImage()
+  const picked = await docsPlatform().api.pickImage()
   if (!picked) return
   await insertImageFromDataUrl(
     editor,
@@ -696,6 +697,7 @@ export function ReviewTab({
   onCompare,
 }: ReviewTabProps) {
   const { t } = useI18n()
+  const aiEnabled = docsPlatform().ai != null
   // One-time acknowledgement before whole-document AI rewrites:
   // Editor / Translate send the full document to the agent, consume credits and
   // may rewrite everything — say so once before the first run.
@@ -712,22 +714,24 @@ export function ReviewTab({
       {/* Word: Proofing (Editor) sits leftmost */}
       <div className="ribbon-group">
         <div className="ribbon-group-items">
-          <button
-            className="rb-big"
-            disabled={!hasDoc}
-            data-tip={`${t('ribbonEditorTip')} — ${t('ribbonAiCreditNote')}`}
-            onClick={() => {
-              if (hasRangeSelection()) onAiPreset(t('ribbonEditorSelectionPrompt'))
-              else if (confirmAiRewrite()) onAiPreset(t('ribbonEditorPrompt'))
-            }}
-          >
-            <span className="rb-big-icon">
-              <span className="ai-feature-icon" aria-hidden="true">
-                <img src={iconEditor} width={22} height={22} alt="" />
+          {aiEnabled && (
+            <button
+              className="rb-big"
+              disabled={!hasDoc}
+              data-tip={`${t('ribbonEditorTip')} — ${t('ribbonAiCreditNote')}`}
+              onClick={() => {
+                if (hasRangeSelection()) onAiPreset(t('ribbonEditorSelectionPrompt'))
+                else if (confirmAiRewrite()) onAiPreset(t('ribbonEditorPrompt'))
+              }}
+            >
+              <span className="rb-big-icon">
+                <span className="ai-feature-icon" aria-hidden="true">
+                  <img src={iconEditor} width={22} height={22} alt="" />
+                </span>
               </span>
-            </span>
-            <span>{t('ribbonEditorBtn')}</span>
-          </button>
+              <span>{t('ribbonEditorBtn')}</span>
+            </button>
+          )}
           <button
             className={`rb-big ${spellcheck ? 'active' : ''}`}
             disabled={!hasDoc}
@@ -743,48 +747,54 @@ export function ReviewTab({
         <div className="ribbon-group-label">{t('ribbonGroupProofing')}</div>
       </div>
 
-      <div className="ribbon-sep" />
+      {aiEnabled && (
+        <>
+          <div className="ribbon-sep" />
 
-      <div className="ribbon-group">
-        <div className="ribbon-group-items">
-          <div className="rb-split-wrap">
-            <button
-              className="rb-big"
-              disabled={!hasDoc}
-              data-tip={`${t('ribbonTranslateTip')} — ${t('ribbonAiCreditNote')}`}
-              onClick={() => toggleDropdown(setDropdown, 'translate')}
-            >
-              <span className="rb-big-icon">
-                <span className="ai-feature-icon" aria-hidden="true">
-                  <img src={iconTranslate} width={22} height={22} alt="" />
-                </span>
-                <IconCaret />
-              </span>
-              <span>{t('ribbonTranslate')}</span>
-            </button>
-            {dropdown === 'translate' && (
-              <div data-rb-panel="" className="layout-menu">
-                {TRANSLATE_TARGETS.map((lang) => (
-                  <button
-                    key={lang.labelKey}
-                    onClick={() => {
-                      setDropdown(() => null)
-                      if (hasRangeSelection()) {
-                        onAiPreset(t('ribbonTranslateSelectionPrompt', { lang: t(lang.labelKey) }))
-                      } else if (confirmAiRewrite()) {
-                        onAiPreset(t('ribbonTranslatePrompt', { lang: t(lang.labelKey) }))
-                      }
-                    }}
-                  >
-                    {t('ribbonTranslateTo', { lang: t(lang.labelKey) })}
-                  </button>
-                ))}
+          <div className="ribbon-group">
+            <div className="ribbon-group-items">
+              <div className="rb-split-wrap">
+                <button
+                  className="rb-big"
+                  disabled={!hasDoc}
+                  data-tip={`${t('ribbonTranslateTip')} — ${t('ribbonAiCreditNote')}`}
+                  onClick={() => toggleDropdown(setDropdown, 'translate')}
+                >
+                  <span className="rb-big-icon">
+                    <span className="ai-feature-icon" aria-hidden="true">
+                      <img src={iconTranslate} width={22} height={22} alt="" />
+                    </span>
+                    <IconCaret />
+                  </span>
+                  <span>{t('ribbonTranslate')}</span>
+                </button>
+                {dropdown === 'translate' && (
+                  <div data-rb-panel="" className="layout-menu">
+                    {TRANSLATE_TARGETS.map((lang) => (
+                      <button
+                        key={lang.labelKey}
+                        onClick={() => {
+                          setDropdown(() => null)
+                          if (hasRangeSelection()) {
+                            onAiPreset(
+                              t('ribbonTranslateSelectionPrompt', { lang: t(lang.labelKey) }),
+                            )
+                          } else if (confirmAiRewrite()) {
+                            onAiPreset(t('ribbonTranslatePrompt', { lang: t(lang.labelKey) }))
+                          }
+                        }}
+                      >
+                        {t('ribbonTranslateTo', { lang: t(lang.labelKey) })}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+            <div className="ribbon-group-label">{t('ribbonGroupLanguage')}</div>
           </div>
-        </div>
-        <div className="ribbon-group-label">{t('ribbonGroupLanguage')}</div>
-      </div>
+        </>
+      )}
 
       <div className="ribbon-sep" />
 
@@ -812,32 +822,34 @@ export function ReviewTab({
             </span>
             <span>{t('ribbonShowComments')}</span>
           </button>
-          <button
-            className="rb-big"
-            disabled={!hasDoc || openCommentCount === 0}
-            data-tip={`${t('ribbonAiCommentsTip', { count: openCommentCount })} — ${t('ribbonAiCreditNote')}`}
-            onClick={() => onAiPreset(t('ribbonAiCommentsPrompt'))}
-          >
-            <span className="rb-big-icon">
-              <span className="ai-feature-icon" aria-hidden="true">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 3V11.5a7.5 7.5 0 0 1 7.5-7.5h2A7.5 7.5 0 0 1 20 11.5z" />
-                  <path
-                    d="M17 14l.26.7c.34.91.5 1.37.84 1.7.33.33.79.5 1.7.84l.7.26-.7.26c-.91.34-1.37.5-1.7.84-.34.33-.5.79-.84 1.7L17 21l-.26-.7c-.34-.91-.5-1.37-.84-1.7-.33-.34-.79-.5-1.7-.84l-.7-.26.7-.26c.91-.34 1.37-.5 1.7-.84.34-.33.5-.79.84-1.7L17 14z"
+          {aiEnabled && (
+            <button
+              className="rb-big"
+              disabled={!hasDoc || openCommentCount === 0}
+              data-tip={`${t('ribbonAiCommentsTip', { count: openCommentCount })} — ${t('ribbonAiCreditNote')}`}
+              onClick={() => onAiPreset(t('ribbonAiCommentsPrompt'))}
+            >
+              <span className="rb-big-icon">
+                <span className="ai-feature-icon" aria-hidden="true">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
                     strokeLinejoin="round"
-                  />
-                </svg>
+                  >
+                    <path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 3V11.5a7.5 7.5 0 0 1 7.5-7.5h2A7.5 7.5 0 0 1 20 11.5z" />
+                    <path
+                      d="M17 14l.26.7c.34.91.5 1.37.84 1.7.33.33.79.5 1.7.84l.7.26-.7.26c-.91.34-1.37.5-1.7.84-.34.33-.5.79-.84 1.7L17 21l-.26-.7c-.34-.91-.5-1.37-.84-1.7-.33-.34-.79-.5-1.7-.84l-.7-.26.7-.26c.91-.34 1.37-.5 1.7-.84.34-.33.5-.79.84-1.7L17 14z"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
               </span>
-            </span>
-            <span>{t('ribbonAiComments')}</span>
-          </button>
+              <span>{t('ribbonAiComments')}</span>
+            </button>
+          )}
         </div>
         <div className="ribbon-group-label">{t('ribbonGroupComments')}</div>
       </div>
@@ -983,33 +995,35 @@ export function ReviewTab({
             </span>
             <span>{t('ribbonNextChange')}</span>
           </button>
-          <button
-            className="rb-big"
-            disabled={!hasDoc || revisionCount === 0}
-            data-tip={`${t('ribbonAiRevisionsTip', { count: revisionCount })} — ${t('ribbonAiCreditNote')}`}
-            onClick={() => onAiPreset(t('ribbonAiRevisionsPrompt'))}
-          >
-            <span className="rb-big-icon">
-              <span className="ai-feature-icon" aria-hidden="true">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M4 5h16M4 9h12M4 13h9M4 17h7" />
-                  <path
-                    d="M17 14l.26.7c.34.91.5 1.37.84 1.7.33.33.79.5 1.7.84l.7.26-.7.26c-.91.34-1.37.5-1.7.84-.34.33-.5.79-.84 1.7L17 21l-.26-.7c-.34-.91-.5-1.37-.84-1.7-.33-.34-.79-.5-1.7-.84l-.7-.26.7-.26c.91-.34 1.37-.5 1.7-.84.34-.33.5-.79.84-1.7L17 14z"
+          {aiEnabled && (
+            <button
+              className="rb-big"
+              disabled={!hasDoc || revisionCount === 0}
+              data-tip={`${t('ribbonAiRevisionsTip', { count: revisionCount })} — ${t('ribbonAiCreditNote')}`}
+              onClick={() => onAiPreset(t('ribbonAiRevisionsPrompt'))}
+            >
+              <span className="rb-big-icon">
+                <span className="ai-feature-icon" aria-hidden="true">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
                     strokeLinejoin="round"
-                  />
-                  <path d="M19.5 4.5l-7 7-2 .5.5-2 7-7z" />
-                </svg>
+                  >
+                    <path d="M4 5h16M4 9h12M4 13h9M4 17h7" />
+                    <path
+                      d="M17 14l.26.7c.34.91.5 1.37.84 1.7.33.33.79.5 1.7.84l.7.26-.7.26c-.91.34-1.37.5-1.7.84-.34.33-.5.79-.84 1.7L17 21l-.26-.7c-.34-.91-.5-1.37-.84-1.7-.33-.34-.79-.5-1.7-.84l-.7-.26.7-.26c.91-.34 1.37-.5 1.7-.84.34-.33.5-.79.84-1.7L17 14z"
+                      strokeLinejoin="round"
+                    />
+                    <path d="M19.5 4.5l-7 7-2 .5.5-2 7-7z" />
+                  </svg>
+                </span>
               </span>
-            </span>
-            <span>{t('ribbonAiRevisions')}</span>
-          </button>
+              <span>{t('ribbonAiRevisions')}</span>
+            </button>
+          )}
         </div>
         <div className="ribbon-group-label">{t('ribbonGroupTracking')}</div>
       </div>
@@ -1117,7 +1131,7 @@ export function ViewTab({
   const winMenuRef = useRef<HTMLDivElement>(null)
 
   const toggleWinMenu = async () => {
-    if (!winMenuOpen) setWindows(await window.desktop.listDocsTabs())
+    if (!winMenuOpen) setWindows(await docsPlatform().api.listDocsTabs())
     setWinMenuOpen((v) => !v)
   }
 
@@ -1332,7 +1346,7 @@ export function ViewTab({
           <button
             className="rb-big"
             data-tip={t('ribbonNewTabTip')}
-            onClick={() => void window.desktop.openNewTab(filePath)}
+            onClick={() => void docsPlatform().api.openNewTab(filePath)}
           >
             <span className="rb-big-icon">
               <IconNewWindow size={BIG} />
@@ -1368,7 +1382,7 @@ export function ViewTab({
                   <button
                     key={w.id}
                     onClick={() => {
-                      void window.desktop.focusDocsTab(w.id)
+                      void docsPlatform().api.focusDocsTab(w.id)
                       setWinMenuOpen(false)
                     }}
                   >

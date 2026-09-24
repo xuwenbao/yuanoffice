@@ -91,9 +91,6 @@ const README_FENCE_OPTION_OMISSIONS = new Set([
   'author',
   'index',
   'fingerprint',
-  'size',
-  'ref',
-  'model',
   'block',
 ])
 

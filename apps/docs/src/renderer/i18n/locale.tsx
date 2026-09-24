@@ -1,3 +1,4 @@
+import { docsPlatform } from '../platform'
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createI18n, htmlLang, type Lang, type Params } from '@genoffice/i18n'
@@ -76,7 +77,7 @@ export function LocaleProvider({ initial, children }: { initial: Lang; children:
   const [lang, setLang] = useState<Lang>(initial)
   useEffect(
     () =>
-      window.desktop.onLanguageChanged((next) => {
+      docsPlatform().api.onLanguageChanged((next) => {
         setModuleLang(next)
         document.documentElement.lang = htmlLang(next)
         setLang(next)

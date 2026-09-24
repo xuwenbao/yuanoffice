@@ -2,6 +2,7 @@ import type { AgentSkill } from '@genoffice/agent-core'
 import type { AttachmentMeta } from '../../shared/desktop-api'
 import { ATTACHMENT_IMAGE_EXTS } from '../../shared/desktop-api'
 import { t } from '../i18n/locale'
+import { sheetsPlatform } from '../platform'
 
 /**
  * Chat-attachment capability as an AgentSkill (same structure as the files-skill
@@ -77,7 +78,7 @@ export function createFilesSkill(getAttachments: () => readonly AttachmentMeta[]
         }
       }
       const offset = Math.max(0, Number(call.input.offset) || 0)
-      const result = await window.desktopApi.readAttachment(att.path, offset, READ_CHUNK_CHARS)
+      const result = await sheetsPlatform().api.readAttachment(att.path, offset, READ_CHUNK_CHARS)
       if (!result.ok) {
         return {
           output: result.error ?? 'Read failed',

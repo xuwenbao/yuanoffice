@@ -6,11 +6,17 @@
  * unmodified entries are written back byte-for-byte (handled by the patch layer).
  * This module only handles reading and metadata.
  */
+import { sha256 } from '@noble/hashes/sha2.js'
 import JSZip from 'jszip'
-import { createHash } from 'node:crypto'
 import { XMLParser } from 'fast-xml-parser'
 import type { SlideSize } from './types'
 import { asXmlNode, xmlArray } from './xml-utils'
+
+function toHex(bytes: Uint8Array): string {
+  let hex = ''
+  for (const byte of bytes) hex += byte.toString(16).padStart(2, '0')
+  return hex
+}
 
 const relsParser = new XMLParser({
   ignoreAttributes: false,
@@ -69,7 +75,7 @@ export class PackageArchive {
   ) {}
 
   static async open(bytes: Uint8Array): Promise<PackageArchive> {
-    const originalHash = createHash('sha256').update(bytes).digest('hex')
+    const originalHash = toHex(sha256(bytes))
     const zip = await JSZip.loadAsync(bytes)
     assertZipWithinLimits(zip)
     const entries = new Map<string, Uint8Array>()
@@ -90,7 +96,7 @@ export class PackageArchive {
   readText(path: string): string | null {
     const bytes = this.entries.get(path)
     if (!bytes) return null
-    return Buffer.from(bytes).toString('utf8')
+    return new TextDecoder().decode(bytes)
   }
 
   readBytes(path: string): Uint8Array | null {

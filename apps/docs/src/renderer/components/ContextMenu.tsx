@@ -1,3 +1,4 @@
+import { docsPlatform } from '../platform'
 import { useEffect, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/core'
 import type { Command } from '@tiptap/pm/state'
@@ -123,7 +124,7 @@ export function EditorContextMenu({
     window.addEventListener('blur', onClose)
     // shell tab-strip presses never reach this document; the preload relays
     // them (app:chrome-pressed) so the menu still dismisses
-    const offChrome = window.desktop?.onChromePressed?.(onClose)
+    const offChrome = docsPlatform().api?.onChromePressed?.(onClose)
     return () => {
       window.removeEventListener('mousedown', close)
       window.removeEventListener('keydown', onKey)
@@ -439,37 +440,45 @@ export function EditorContextMenu({
           })}
         </>
       )}
-      <div className="ctx-sep" />
-      {item(t('appSynonyms'), {
-        disabled: !synonymText,
-        ai: true,
-        onClick: run(() => onAiPreset(t('appSynonymsPrompt', { text: synonymText }))),
-      })}
-      <div className="ctx-item-wrap" onMouseLeave={() => setSubmenu(null)}>
-        {item(t('appTranslate'), { disabled: !hasSelection, submenuKey: 'translate', ai: true })}
-        {submenu === 'translate' && hasSelection && (
-          <div className="ctx-submenu">
-            {TRANSLATE_TARGETS.map((target) => (
-              <button
-                key={target.labelKey}
-                className="ctx-item"
-                onClick={run(() =>
-                  onAiPreset(
-                    t('appTranslateSelectionPrompt', {
-                      lang: t(target.labelKey),
-                      text: selectedText,
-                    }),
-                  ),
-                )}
-              >
-                <span className="ctx-label">
-                  {t('appTranslateTo', { lang: t(target.labelKey) })}
-                </span>
-              </button>
-            ))}
+      {docsPlatform().ai && (
+        <>
+          <div className="ctx-sep" />
+          {item(t('appSynonyms'), {
+            disabled: !synonymText,
+            ai: true,
+            onClick: run(() => onAiPreset(t('appSynonymsPrompt', { text: synonymText }))),
+          })}
+          <div className="ctx-item-wrap" onMouseLeave={() => setSubmenu(null)}>
+            {item(t('appTranslate'), {
+              disabled: !hasSelection,
+              submenuKey: 'translate',
+              ai: true,
+            })}
+            {submenu === 'translate' && hasSelection && (
+              <div className="ctx-submenu">
+                {TRANSLATE_TARGETS.map((target) => (
+                  <button
+                    key={target.labelKey}
+                    className="ctx-item"
+                    onClick={run(() =>
+                      onAiPreset(
+                        t('appTranslateSelectionPrompt', {
+                          lang: t(target.labelKey),
+                          text: selectedText,
+                        }),
+                      ),
+                    )}
+                  >
+                    <span className="ctx-label">
+                      {t('appTranslateTo', { lang: t(target.labelKey) })}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
       {isFloating && (
         <>
           <div className="ctx-sep" />

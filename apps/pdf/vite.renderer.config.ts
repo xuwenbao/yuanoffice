@@ -1,17 +1,25 @@
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig, normalizePath } from 'vite'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
 
 // renderer-only dev server (embedded by shell via PDF_RENDERER_URL for HMR; no standalone Electron)
 const require = createRequire(import.meta.url)
+const pdfRoot = dirname(fileURLToPath(import.meta.url))
 const pdfjsRoot = dirname(dirname(require.resolve('pdfjs-dist/package.json')))
 // vite-plugin-static-copy globs require POSIX separators; join() breaks on Windows
 const pdfjsDir = (sub: string) => normalizePath(join(pdfjsRoot, 'pdfjs-dist', sub))
 
 export default defineConfig({
   root: 'src/renderer',
+  resolve: {
+    alias: {
+      '@host': join(pdfRoot, 'src/renderer/host-electron.ts'),
+      'pdf-electron-platform': join(pdfRoot, 'src/renderer/platform-electron.ts'),
+    },
+  },
   plugins: [
     react(),
     viteStaticCopy({

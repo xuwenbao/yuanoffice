@@ -1,0 +1,14 @@
+import type { zh } from './zh'
+
+export const de = {
+  home: 'Start',
+  browse: 'Durchsuchen',
+  empty: 'Dieser Ordner enthält keine Dateien',
+  close: 'Schließen',
+  unsaved: 'Dieses Dokument hat ungespeicherte Änderungen. Speichern, verwerfen oder abbrechen.',
+  dirty: 'Nicht gespeichert',
+  save: 'Speichern',
+  discard: 'Verwerfen',
+  cancel: 'Abbrechen',
+  failed: 'Dieser Ordner konnte nicht gelesen werden',
+} satisfies Record<keyof typeof zh, string>

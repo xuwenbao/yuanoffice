@@ -19,6 +19,8 @@ export function genofficeUserDataDir(env: NodeJS.ProcessEnv): string {
 export interface GuiOpenDocuments {
   pid: number
   paths: string[]
+  /** Set by the browser control service. Desktop registries omit it. */
+  source?: 'control-service'
 }
 
 /**
@@ -38,7 +40,11 @@ export function guiOpenDocuments(env: NodeJS.ProcessEnv): GuiOpenDocuments | nul
       const raw = JSON.parse(readFileSync(path, 'utf8')) as Partial<GuiOpenDocuments>
       if (typeof raw.pid !== 'number' || !Array.isArray(raw.paths)) continue
       if (!processAlive(raw.pid)) continue
-      return { pid: raw.pid, paths: raw.paths.filter((p): p is string => typeof p === 'string') }
+      return {
+        pid: raw.pid,
+        paths: raw.paths.filter((p): p is string => typeof p === 'string'),
+        ...(raw.source === 'control-service' ? { source: 'control-service' as const } : {}),
+      }
     } catch {
       continue
     }
@@ -55,20 +61,27 @@ function processAlive(pid: number): boolean {
   }
 }
 
-/** Refuses to write a document the editor is showing; `--force` skips this. */
-export function assertNotOpenInGui(abs: string, env: NodeJS.ProcessEnv): void {
+/**
+ * Refuses to write a document the editor is showing.
+ * `--force` still skips a desktop registration. A control-service registration
+ * is never skipped: the browser editor's memory would be overwritten on disk.
+ */
+export function assertNotOpenInGui(abs: string, env: NodeJS.ProcessEnv, force = false): void {
   const open = guiOpenDocuments(env)
   if (!open || open.paths.length === 0) return
   const target = realizedPath(abs)
   if (!open.paths.some((p) => realizedPath(p) === target)) return
+  if (force && open.source !== 'control-service') return
+  const lockedByBrowser = open.source === 'control-service'
   throw new CliError(
     EXIT.file,
     `GenOffice has this file open: ${abs}`,
     { gui_pid: open.pid },
     {
       reason: 'file_open_in_gui',
-      suggestion:
-        'close the tab in GenOffice first, or pass --force to write anyway (the editor may overwrite your change on its next save)',
+      suggestion: lockedByBrowser
+        ? 'save or close the browser tab first; --force cannot overwrite a file the browser editor has open'
+        : 'close the tab in GenOffice first, or pass --force to write anyway (the editor may overwrite your change on its next save)',
     },
   )
 }

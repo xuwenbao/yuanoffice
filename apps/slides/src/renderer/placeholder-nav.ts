@@ -9,6 +9,7 @@ import type { EditParagraph } from '../shared/ipc'
 import { FIT_WIDTH } from './app-constants'
 import { isEditableText } from './konva-adapter'
 import { paragraphsBlank } from './textbox-insert'
+import { slidesPlatform } from './platform'
 
 /** Header/footer placeholders are not on PowerPoint's Ctrl+Enter cycle */
 const SKIPPED = new Set(['dt', 'ftr', 'sldNum'])
@@ -33,13 +34,13 @@ export async function nextPlaceholder(
   const { editing, slide, current } = ctx
   if (!editing || !slide) return
   if (editing.discardIfEmpty && (!paragraphs || paragraphsBlank(paragraphs))) {
-    const updated = await window.slidesApi.deleteElement({
+    const updated = await slidesPlatform().api.deleteElement({
       slideIndex: current,
       sourceId: editing.sourceId,
     })
     if (updated) ctx.applySlide(current, updated)
   } else if (paragraphs) {
-    const updated = await window.slidesApi.editText({
+    const updated = await slidesPlatform().api.editText({
       slideIndex: current,
       sourceId: editing.sourceId,
       paragraphs,
@@ -53,7 +54,10 @@ export async function nextPlaceholder(
     ctx.setEditing({ sourceId: next })
     return
   }
-  const r = await window.slidesApi.addBlankSlide({ sourceIndex: current, fitWidthPx: FIT_WIDTH })
+  const r = await slidesPlatform().api.addBlankSlide({
+    sourceIndex: current,
+    fitWidthPx: FIT_WIDTH,
+  })
   if (!r) {
     ctx.setEditing(null)
     ctx.setSelectedIds([editing.sourceId])

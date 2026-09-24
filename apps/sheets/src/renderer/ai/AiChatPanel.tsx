@@ -20,6 +20,7 @@ import fileVideoIcon from '../assets/file-video.png'
 import fileVoiceIcon from '../assets/file-voice.png'
 import fileDocumentIcon from '../assets/file-document.png'
 import fileGeneralIcon from '../assets/file-general.png'
+import { sheetsPlatform } from '../platform'
 
 /** Clipboard bitmap MIME → attachment extension (matches the main process's
  * ATTACHMENT_IMAGE_EXTS) */
@@ -318,8 +319,8 @@ export function AiChatPanel({
     for (const a of wanted) {
       if (!ATTACHMENT_IMAGE_EXTS.has(a.ext) || previewRequestedRef.current.has(a.path)) continue
       previewRequestedRef.current.add(a.path)
-      void window.desktopApi
-        .readAttachmentImage(a.path)
+      void sheetsPlatform()
+        .api.readAttachmentImage(a.path)
         .then((r) => {
           if (!previewRequestedRef.current.has(a.path)) return // removed while the read was in flight
           if (r.ok && r.base64 && r.mime) {
@@ -467,7 +468,7 @@ export function AiChatPanel({
     e.stopPropagation()
     setDragOver(false)
     const paths = Array.from(e.dataTransfer.files)
-      .map((f) => window.desktopApi.getPathForFile(f))
+      .map((f) => sheetsPlatform().api.getPathForFile(f))
       .filter(Boolean)
     if (paths.length > 0) onAddAttachmentPaths(paths)
   }
@@ -477,7 +478,7 @@ export function AiChatPanel({
   const onPasteFiles = (files: File[]): void => {
     const paths: string[] = []
     for (const f of files) {
-      const p = window.desktopApi.getPathForFile(f)
+      const p = sheetsPlatform().api.getPathForFile(f)
       if (p) {
         paths.push(p)
         continue
@@ -520,7 +521,7 @@ export function AiChatPanel({
         <div className="ai-panel-header-actions">
           <AiPanelSideButton
             lang={lang}
-            onMove={(side) => window.desktopApi.setAiPanelPrefs({ side })}
+            onMove={(side) => sheetsPlatform().api.setAiPanelPrefs({ side })}
           />
           {(chat.length > 0 || historicChat.length > 0) && (
             <button
@@ -638,7 +639,7 @@ export function AiChatPanel({
                 {entry.loginRequired && (
                   <button
                     className="ai-login-btn"
-                    onClick={() => void window.desktopApi.aiGskLogin()}
+                    onClick={() => void sheetsPlatform().api.aiGskLogin()}
                   >
                     {t('aiGskLoginBtn')}
                   </button>

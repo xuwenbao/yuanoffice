@@ -1,4 +1,8 @@
+import { LIVE_TOOL_NAMES } from '@genoffice/editor-control'
 import { McpServerService, DEFAULT_MCP_PORT, type McpToolDefinition } from './mcp-server'
+
+/** Live editor tools shared with the browser control service. Desktop tools stay in ./tools. */
+export const SHARED_LIVE_TOOLS: readonly string[] = LIVE_TOOL_NAMES
 import { McpLogger } from './mcp-logger'
 import type { CliRunner } from './cli-runner'
 import { createDocumentTools, documentDriver, type DocsControl } from './tools/document-tools'

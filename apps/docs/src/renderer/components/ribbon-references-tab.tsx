@@ -1,3 +1,4 @@
+import { docsPlatform } from '../platform'
 import { useState } from 'react'
 import type { Editor } from '@tiptap/core'
 import type { ZoteroCommand } from '../../shared/ipc'
@@ -377,7 +378,7 @@ export function ReferencesTab({
     }
     setZoteroBusy(command)
     try {
-      const result = await window.desktop.zoteroCommand(command)
+      const result = await docsPlatform().api.zoteroCommand(command)
       if (!result.ok) {
         console.error('Zotero integration failed', result.error)
         window.alert(

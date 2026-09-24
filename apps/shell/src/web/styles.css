@@ -1,0 +1,137 @@
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  background: var(--surface);
+  color: var(--text);
+  font:
+    14px/1.4 -apple-system,
+    'PingFang SC',
+    'Segoe UI',
+    sans-serif;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.web-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 40px;
+  flex: 0 0 40px;
+  padding: 0 8px;
+  background: var(--surface-subtle);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.web-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 220px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.web-tabs button.active {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+  font-weight: 600;
+}
+
+.web-tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.web-tab-close {
+  color: var(--text-muted);
+}
+
+.web-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.web-stage > .home,
+.web-stage > .frames,
+.web-stage > div {
+  position: absolute;
+  inset: 0;
+}
+
+.home {
+  height: 100%;
+}
+
+button.tree-chevron,
+button.tree-name {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+button.tree-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: start;
+}
+
+.web-stage > .back,
+.frames iframe.back {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.frames iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--surface);
+}
+
+.dialog {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--color-bg-overlay);
+}
+
+.dialog form {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-12);
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.quick-card:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

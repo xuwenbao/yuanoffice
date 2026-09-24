@@ -10,6 +10,8 @@
   "desktopName": "genoffice.desktop",
   "scripts": {
     "dev": "electron-vite dev --watch",
+    "dev:web": "vite --config vite.web.config.ts",
+    "build:web": "vite build --config vite.web.config.ts",
     "build": "electron-vite build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",

@@ -1,5 +1,9 @@
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+
+const here = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   main: {
@@ -30,5 +34,12 @@ export default defineConfig({
   },
   renderer: {
     plugins: [react()],
+    resolve: {
+      alias: {
+        '@host': resolve(here, 'src/renderer/host-electron.ts'),
+        'sheets-electron-platform': resolve(here, 'src/renderer/platform-electron.ts'),
+        '@genoffice/platform': resolve(here, '../../packages/platform/src/index.ts'),
+      },
+    },
   },
 })

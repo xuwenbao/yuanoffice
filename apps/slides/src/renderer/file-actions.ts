@@ -11,6 +11,7 @@ import { renderSlidesToPdfPages } from './export-pages'
 import { renderSlidesToPngBase64 } from './export-render'
 import { t } from './i18n/locale'
 import { showToast } from './components/toast-bus'
+import { slidesPlatform } from './platform'
 
 /**
  * If a text box/table is still being edited on ⌘S/close-save, blur first so the
@@ -92,7 +93,7 @@ export async function save(getCtx: () => ActionCtx, quiet = false): Promise<bool
     const ctx = getCtx()
     await flushActiveEdit(ctx)
     await ctx.flushNotes()
-    const r = await window.slidesApi.save()
+    const r = await slidesPlatform().api.save()
     if (r.ok) {
       if (r.slides) adoptSavedSlides(ctx, r.slides)
       if (r.path) ctx.setPath(r.path)
@@ -119,7 +120,7 @@ export async function saveAs(getCtx: () => ActionCtx): Promise<void> {
     await flushActiveEdit(ctx)
     await ctx.flushNotes()
     const name = ctx.path?.split('/').pop() ?? 'presentation.pptx'
-    const r = await window.slidesApi.saveAs(name)
+    const r = await slidesPlatform().api.saveAs(name)
     if (r.ok) {
       if (r.slides) adoptSavedSlides(ctx, r.slides)
       ctx.setPath(r.path ?? ctx.path)
@@ -149,12 +150,12 @@ export async function exportImages(ctx: ActionCtx): Promise<void> {
     ctx.setStatus(t('appExportNoSlides'))
     return
   }
-  const dir = await window.slidesApi.pickExportDir()
+  const dir = await slidesPlatform().api.pickExportDir()
   if (!dir) return
   ctx.setStatus(t('appExportImagesProgress', { count: visible.length }))
   try {
     const pngs = await renderSlidesToPngBase64(visible, ctx.images)
-    const r = await window.slidesApi.exportImages({
+    const r = await slidesPlatform().api.exportImages({
       dir,
       baseName: exportBaseName(ctx),
       pngsBase64: pngs,
@@ -179,8 +180,8 @@ async function collectPdfLinks(ctx: ActionCtx): Promise<ExportPdfLink[][]> {
   const pageOfModelIndex = new Map(modelIndexes.map((mi, page) => [mi, page] as const))
   try {
     const [linkLists, runLinkLists] = await Promise.all([
-      Promise.all(modelIndexes.map((mi) => window.slidesApi.getSlideLinks(mi))),
-      Promise.all(modelIndexes.map((mi) => window.slidesApi.getRunLinks(mi))),
+      Promise.all(modelIndexes.map((mi) => slidesPlatform().api.getSlideLinks(mi))),
+      Promise.all(modelIndexes.map((mi) => slidesPlatform().api.getRunLinks(mi))),
     ])
     const visible = modelIndexes.map((mi) => ctx.slides[mi]!)
     return collectExportPdfLinks(visible, linkLists, runLinkLists, pageOfModelIndex)
@@ -203,13 +204,14 @@ export async function exportPdf(ctx: ActionCtx, outPath?: string): Promise<boole
     ctx.setStatus(t('appExportNoSlides'))
     return false
   }
-  const target = outPath ?? (await window.slidesApi.pickExportPdfPath(`${exportBaseName(ctx)}.pdf`))
+  const target =
+    outPath ?? (await slidesPlatform().api.pickExportPdfPath(`${exportBaseName(ctx)}.pdf`))
   if (!target) return false
   ctx.setStatus(t('appExportPdfProgress'))
   try {
     const { pages, fontCss } = await renderSlidesToPdfPages(visible, ctx.images)
     const links = await collectPdfLinks(ctx)
-    const r = await window.slidesApi.exportPdf({
+    const r = await slidesPlatform().api.exportPdf({
       filePath: target,
       pages,
       widthPx: visible[0].widthPx,

@@ -1,5 +1,6 @@
 import type { AgentSkill } from '@genoffice/agent-core'
 import { t } from '../i18n/locale'
+import { sheetsPlatform } from '../platform'
 
 /**
  * Web-search AgentSkill (same source as docs/slides web_search):
@@ -38,7 +39,7 @@ export function createSearchSkill(): AgentSkill {
       if (!query) {
         return { output: 'query must not be empty', isError: true, summary: t('aiToolWebSearch') }
       }
-      const r = await window.desktopApi.webSearch(query, Number(call.input.maxResults) || 6)
+      const r = await sheetsPlatform().api.webSearch(query, Number(call.input.maxResults) || 6)
       // a backend failure must not read as "no results" — the model would fabricate conclusions
       if (r.method === 'error') {
         return {

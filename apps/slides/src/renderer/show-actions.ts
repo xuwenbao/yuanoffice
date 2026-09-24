@@ -6,6 +6,7 @@
 import type { ActionCtx } from './action-context'
 import type { CustomShow } from './slideshow-utils'
 import { t } from './i18n/locale'
+import { slidesPlatform } from './platform'
 
 /** Instant black curtain under the upcoming show (body::after overlay): painted on the
  *  very next frame after the click, it hides the React mount + window-snap latency.
@@ -81,7 +82,7 @@ export async function saveRehearseTimings(ctx: ActionCtx): Promise<void> {
     .map((sec, i) => ({ slideIndex: i, ms: sec * 1000 }))
     .filter((t) => t.ms > 0)
   ctx.setPendingRehearse(null)
-  const ok = await window.slidesApi.setAdvanceTimes({ times })
+  const ok = await slidesPlatform().api.setAdvanceTimes({ times })
   if (ok) {
     ctx.setDirty(true)
     ctx.setStatus(t('appStatusRehearseSaved', { count: times.length }))
@@ -118,7 +119,7 @@ export async function setSlidesHidden(
 ): Promise<void> {
   const sel = [...new Set(indexes)].filter((i) => ctx.slides[i])
   if (!sel.length) return
-  const r = await window.slidesApi.setSlidesHidden({ slideIndexes: sel, hidden })
+  const r = await slidesPlatform().api.setSlidesHidden({ slideIndexes: sel, hidden })
   if (!r) return
   ctx.setSlides(r)
   ctx.setDirty(true)

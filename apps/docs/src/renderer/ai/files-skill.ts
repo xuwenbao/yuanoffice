@@ -1,3 +1,4 @@
+import { docsPlatform } from '../platform'
 import type { AgentSkill } from '@genoffice/agent-core'
 import type { AttachmentMeta } from '../../shared/ipc'
 import { ATTACHMENT_IMAGE_EXTS } from '../../shared/ipc'
@@ -75,7 +76,7 @@ export function createFilesSkill(getAttachments: () => AttachmentMeta[]): AgentS
         }
       }
       const offset = Math.max(0, Number(call.input.offset) || 0)
-      const result = await window.desktop.readAttachment(att.path, offset, READ_CHUNK_CHARS)
+      const result = await docsPlatform().api.readAttachment(att.path, offset, READ_CHUNK_CHARS)
       if (!result.ok) {
         return {
           output: result.error ?? 'read failed',
