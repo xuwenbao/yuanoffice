@@ -53,7 +53,16 @@ function Shell() {
       if (message.kind === 'doc-state') {
         setTabs((current) =>
           current.map((tab) =>
-            tab.id === message.frameId ? { ...tab, title: message.title, dirty: message.dirty, path: message.path } : tab,
+            tab.id === message.frameId
+              ? {
+                  ...tab,
+                  title: message.title || tab.title,
+                  dirty: message.dirty,
+                  // An empty path is an untitled draft. Replacing the iframe src
+                  // with it reloads the page and drops the file that was open.
+                  path: message.path || tab.path,
+                }
+              : tab,
           ),
         )
       }

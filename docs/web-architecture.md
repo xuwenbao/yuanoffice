@@ -158,7 +158,7 @@ Desktop registrations keep the old `--force` behaviour.
 | Phase | State | What landed |
 | --- | --- | --- |
 | 0 Upstream | done | `upstream` remote; fast-forward `f36446f` to `8355a8f` |
-| 1 Docs web | done | Platform packages, docs seam (`docsPlatform()`), web host at `dist/web/app/docs`, control-service file API. Web bundle has no `window.desktop`, `electron`, or `ai-provider`. Docx bytes round-trip through `/api/files`. |
+| 1 Docs web | done | Platform packages, docs seam (`docsPlatform()`), web host at `dist/web/app/docs`, control-service file API. Web bundle has no `window.desktop`, `electron`, or `ai-provider`. Docx bytes round-trip through `/api/files`. The docs page allows `blob:` on `connect-src` so the opened file can be fetched from its blob URL. |
 | 2 Live control | done | `editor-control`, `/mcp`, `genoffice editor`, lease, `--force` ignored for `source: "control-service"`. Playwright opens `/harness/editor.html`: apply changes the page and leaves the file unchanged. |
 | 3 Web shell | done | `apps/shell/src/web`: same-origin iframes, frame protocol, shell WebSocket (`open` / `focus`), IndexedDB drafts, route priority in `tabs.ts` (tested). The home page follows the desktop home (recent, starred, folders, new file) and talks only to the file API. |
 | 4 PDF, slides, sheets | done with gaps | The shell iframe for every kind is `/app/{kind}/index.html` (the desktop page). PDF opens through `ServiceFiles` into the existing viewer. Slides open, render, text, transform, and save live in `src/domain/document.ts`; the browser holds the deck with `pptx-engine` and the desktop main process calls those functions. Sheets mounts the Univer page. Opening a workbook needs the wasm reactor (see gaps). |

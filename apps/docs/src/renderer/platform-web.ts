@@ -148,6 +148,12 @@ function createWebDesktopApi(files: ServiceFiles, drafts: DraftStore, link: Cont
     async consumeNewBlankDoc() {
       return pendingPath === null && !new URLSearchParams(location.search).get('path')
     },
+    async consumeAiDocContent() {
+      return null
+    },
+    async consumeHeadlessExport() {
+      return null
+    },
     async saveDocx(path, data) {
       await files.write(path, new Uint8Array(data), true)
       await drafts.delete(path).catch(() => {})
@@ -160,7 +166,7 @@ function createWebDesktopApi(files: ServiceFiles, drafts: DraftStore, link: Cont
       return { ok: true, path }
     },
     async saveDocxNew(defaultName, data) {
-      return implemented.saveDocxAs!(defaultName, data)
+      return saveNewInRoot(files, defaultName, data)
     },
     async saveDocxTo(path, data, overwrite) {
       await files.write(path, new Uint8Array(data), overwrite)
@@ -229,6 +235,27 @@ function createWebDesktopApi(files: ServiceFiles, drafts: DraftStore, link: Cont
       return () => Promise.reject(new Error(`${prop} is not available in the browser host`))
     },
   })
+}
+
+async function saveNewInRoot(
+  files: ServiceFiles,
+  defaultName: string,
+  data: ArrayBuffer,
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  const roots = await files.list('')
+  const dir = roots.find((entry) => entry.kind === 'dir')?.path
+  if (!dir) return { ok: false, error: 'no allowed folder' }
+  const base = defaultName.split(/[/\\]/).pop() || 'document.docx'
+  const name = base.toLowerCase().endsWith('.docx') ? base : `${base}.docx`
+  const taken = new Set((await files.list(dir)).map((entry) => entry.name))
+  const dot = name.lastIndexOf('.')
+  const stem = dot > 0 ? name.slice(0, dot) : name
+  const ext = dot > 0 ? name.slice(dot) : ''
+  let candidate = name
+  for (let n = 2; taken.has(candidate) && n < 1000; n++) candidate = `${stem} ${n}${ext}`
+  const path = `${dir.replace(/[/\\]+$/, '')}/${candidate}`
+  await files.write(path, new Uint8Array(data), false)
+  return { ok: true, path }
 }
 
 async function openPath(files: ServiceFiles, path: string): Promise<OpenDocxResult> {
