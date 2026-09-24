@@ -147,6 +147,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libxml2-utils
 
+      # control-service browser tests launch Playwright Chromium. The e2e job
+      # installs it separately; this job does not share that runner.
+      - name: Install Chromium for browser tests
+        run: npx playwright install chromium
+
       - name: Test
         run: npm test
 
