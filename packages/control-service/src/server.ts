@@ -416,7 +416,7 @@ async function mcpResponse(
         tools: liveToolDefinitions().map((tool) => ({
           name: tool.name,
           description: tool.description,
-          inputSchema: { type: 'object', additionalProperties: true },
+          inputSchema: tool.inputSchema,
         })),
       },
     }

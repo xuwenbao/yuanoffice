@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { dispatchLiveTool } from '../src/dispatch'
+import { dispatchLiveTool, liveToolDefinitions } from '../src/dispatch'
+import { LIVE_TOOL_NAMES } from '../src/names'
 import { EditorRegistry } from '../src/registry'
 
 function registryWith(
@@ -17,6 +18,25 @@ function registryWith(
   })
   return registry
 }
+
+describe('live tool definitions', () => {
+  it('publishes a parameter schema for every tool', () => {
+    const tools = liveToolDefinitions()
+    expect(tools.map((tool) => tool.name)).toEqual([...LIVE_TOOL_NAMES])
+    for (const tool of tools) {
+      expect(tool.inputSchema.type).toBe('object')
+      expect(Object.keys(tool.inputSchema.properties).length).toBeGreaterThan(0)
+      expect(tool.inputSchema).not.toHaveProperty('additionalProperties', false)
+    }
+    const replace = tools.find((tool) => tool.name === 'replace_blocks')
+    expect(replace?.inputSchema.required).toEqual(
+      expect.arrayContaining(['html', 'startBlockIndex', 'endBlockIndex', 'document']),
+    )
+    const open = tools.find((tool) => tool.name === 'open_documents')
+    expect(open?.inputSchema.properties).not.toHaveProperty('document')
+    expect(open?.inputSchema.required).not.toContain('document')
+  })
+})
 
 describe('live tool dispatch', () => {
   it('marks an edit as not persisted and rejects a stale revision', async () => {

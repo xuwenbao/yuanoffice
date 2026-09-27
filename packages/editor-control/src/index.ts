@@ -7,4 +7,9 @@ export {
 } from './names.js'
 export type { EditorSession, EditorDirectory } from './session.js'
 export { EditorRegistry, LiveError } from './registry.js'
-export { dispatchLiveTool, liveToolDefinitions, type LiveToolResult } from './dispatch.js'
+export {
+  dispatchLiveTool,
+  liveToolDefinitions,
+  type LiveToolInputSchema,
+  type LiveToolResult,
+} from './dispatch.js'
