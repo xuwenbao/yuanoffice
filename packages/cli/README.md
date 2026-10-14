@@ -41,7 +41,7 @@ genoffice editor read --doc report.docx --json       # editor memory, including 
 genoffice editor apply --doc report.docx --ops ops.json --json   # change the open page; the file stays untouched until editor save
 genoffice editor status --doc report.docx --json
 genoffice editor save --doc report.docx [--path copy.docx --overwrite] --json
-genoffice serve --root ~/Documents [--port 8787] [--static dist/web]
+genoffice serve --root ~/Documents [--port 8787] [--static dist/web] [--agent-webhook http://127.0.0.1:8788/hook] [--agent-command '["claude","-p","handle the request"]'] [--allow-remote-callback]
 genoffice search "electron headless export" [--images] [--max 6] --json
 genoffice image "isometric office, soft light" --aspect 16:9 --out hero.png
 genoffice media photo.jpg --ask "What text is in this picture?" --json

@@ -247,4 +247,4 @@ genoffice serve --root . --agent-command '["claude","-p","Handle GENOFFICE_REQUE
 
 The command is spawned without a shell. `GENOFFICE_REQUEST_ID` and `GENOFFICE_MCP_URL` are in the environment; `{requestId}` and `{mcpUrl}` in argv are replaced too.
 
-Cursor: point a webhook at a small loopback receiver that calls your agent with the `requestId`, then have that agent use the genoffice MCP server (the same `tools/call` flow above). Claude Code: the `--agent-command` form runs `claude -p` per request; the prompt should tell it to claim, read, replace, and complete that id and not to use its own shell to rewrite the file.
+Cursor: point a webhook at a small loopback receiver that calls your agent with the `requestId`, then have that agent call the control service over MCP (the same `tools/call` flow above). Claude Code: the `--agent-command` form runs `claude -p` per request; the prompt should tell it to claim, read, replace, and complete that id and not to use its own shell to rewrite the file.
