@@ -22,13 +22,25 @@ const MUTATING = new Set<LiveToolName>([
   'replace_selection',
 ])
 
-export interface LiveToolDefinition {
-  name: LiveToolName
-  description: string
-  inputSchema: Record<string, unknown>
+export interface LiveToolInputSchema {
+  type: 'object'
+  properties: Record<string, LiveToolSchemaProperty>
+  required: string[]
 }
 
-export function liveToolDefinitions(): LiveToolDefinition[] {
+interface LiveToolSchemaProperty {
+  type: 'string' | 'integer' | 'boolean' | 'array' | 'object'
+  description: string
+  enum?: readonly string[]
+  items?: { type: 'object' }
+  maxItems?: number
+}
+
+export function liveToolDefinitions(): Array<{
+  name: LiveToolName
+  description: string
+  inputSchema: LiveToolInputSchema
+}> {
   return LIVE_TOOL_NAMES.map((name) => ({
     name,
     description: DESCRIPTION[name],
@@ -77,180 +89,243 @@ const DESCRIPTION: Record<LiveToolName, string> = {
     'Replace the anchored selection with inline HTML. Pass requestId and expectedText. A mismatch returns selection_changed and does not edit. persisted is false until save_document. A target that spans several blocks is refused; use replace_blocks.',
 }
 
-const doc = { type: 'string', description: 'editor id or path' }
-const requestId = { type: 'string', description: 'agent request this edit belongs to' }
+const documentField: LiveToolSchemaProperty = {
+  type: 'string',
+  description:
+    'editor id or absolute path of an open document (from open_documents {action:"list"})',
+}
 
-const INPUT_SCHEMA: Record<LiveToolName, Record<string, unknown>> = {
-  open_documents: {
-    type: 'object',
-    additionalProperties: true,
-    properties: {
-      action: { type: 'string', enum: ['list', 'read', 'close'] },
-      target: { type: 'string' },
-      unsaved: { type: 'string', enum: ['save', 'discard'] },
+const baseRevisionField: LiveToolSchemaProperty = {
+  type: 'integer',
+  description:
+    'revision from the last read or status; a mismatch returns revision_conflict and does not run',
+}
+
+const requestIdField: LiveToolSchemaProperty = {
+  type: 'string',
+  description: 'agent request this edit belongs to',
+}
+
+const htmlInsert: LiveToolSchemaProperty = {
+  type: 'string',
+  description: 'restricted HTML fragment to insert',
+}
+
+const htmlReplace: LiveToolSchemaProperty = {
+  type: 'string',
+  description: 'restricted HTML fragment the range is replaced with',
+}
+
+const opsField = (description: string, maxItems?: number): LiveToolSchemaProperty => ({
+  type: 'array',
+  description,
+  items: { type: 'object' },
+  ...(maxItems === undefined ? {} : { maxItems }),
+})
+
+function objectSchema(
+  properties: Record<string, LiveToolSchemaProperty>,
+  required: string[] = [],
+): LiveToolInputSchema {
+  return { type: 'object', properties, required }
+}
+
+/** Field names match the desktop tools. Required fields follow this dispatcher. */
+const INPUT_SCHEMA: Record<LiveToolName, LiveToolInputSchema> = {
+  open_documents: objectSchema({
+    action: {
+      type: 'string',
+      enum: ['list', 'read', 'close'],
+      description: 'what to do; default "list"',
     },
-  },
-  read_document: {
-    type: 'object',
-    additionalProperties: true,
-    required: ['document'],
-    properties: { document: doc },
-  },
-  insert_content: {
-    type: 'object',
-    additionalProperties: true,
-    required: ['document', 'html'],
-    properties: {
-      document: doc,
-      html: { type: 'string' },
-      afterBlockIndex: { type: 'integer' },
-      requestId,
+    target: {
+      type: 'string',
+      description: 'editor id or path of the document; required for "read" and "close"',
     },
-  },
-  replace_blocks: {
-    type: 'object',
-    additionalProperties: true,
-    required: ['document', 'html', 'startBlockIndex', 'endBlockIndex'],
-    properties: {
-      document: doc,
-      html: { type: 'string' },
-      startBlockIndex: { type: 'integer' },
-      endBlockIndex: { type: 'integer' },
-      requestId,
+    unsaved: {
+      type: 'string',
+      enum: ['save', 'discard'],
+      description:
+        '"close" only: save before closing, or discard the changes. A dirty document is refused unless this is set.',
     },
-  },
-  apply_ops: {
-    type: 'object',
-    additionalProperties: true,
-    required: ['document', 'ops'],
-    properties: {
-      document: doc,
-      ops: { type: 'array' },
-      dryRun: { type: 'boolean' },
-      baseRevision: { type: 'number' },
-      requestId,
+  }),
+  read_document: objectSchema({ document: documentField, baseRevision: baseRevisionField }, [
+    'document',
+  ]),
+  insert_content: objectSchema(
+    {
+      document: documentField,
+      html: htmlInsert,
+      afterBlockIndex: {
+        type: 'integer',
+        description:
+          'insert after this block index; -1 = start of document; omitted = after the block containing the cursor',
+      },
+      baseRevision: baseRevisionField,
+      requestId: requestIdField,
     },
-  },
-  apply_sheet_ops: {
-    type: 'object',
-    additionalProperties: true,
-    required: ['document', 'ops'],
-    properties: {
-      document: doc,
-      ops: { type: 'array' },
-      baseRevision: { type: 'number' },
-      requestId,
+    ['document', 'html'],
+  ),
+  replace_blocks: objectSchema(
+    {
+      document: documentField,
+      startBlockIndex: {
+        type: 'integer',
+        description: 'first block index to replace (inclusive)',
+      },
+      endBlockIndex: {
+        type: 'integer',
+        description: 'last block index to replace (inclusive)',
+      },
+      html: htmlReplace,
+      baseRevision: baseRevisionField,
+      requestId: requestIdField,
     },
-  },
-  apply_slide_ops: {
-    type: 'object',
-    additionalProperties: true,
-    required: ['document', 'ops'],
-    properties: {
-      document: doc,
-      ops: { type: 'array' },
-      baseRevision: { type: 'number' },
-      requestId,
+    ['document', 'startBlockIndex', 'endBlockIndex', 'html'],
+  ),
+  apply_ops: objectSchema(
+    {
+      document: documentField,
+      ops: opsField('array of op objects'),
+      dryRun: {
+        type: 'boolean',
+        description: 'validate and plan the batch without changing the document',
+      },
+      baseRevision: baseRevisionField,
+      requestId: requestIdField,
     },
-  },
-  read_pdf: {
-    type: 'object',
-    additionalProperties: true,
-    required: ['document'],
-    properties: { document: doc },
-  },
-  save_document: {
-    type: 'object',
-    additionalProperties: true,
-    required: ['document'],
-    properties: { document: doc, path: { type: 'string' }, overwrite: { type: 'boolean' } },
-  },
-  document_status: {
-    type: 'object',
-    additionalProperties: true,
-    required: ['document'],
-    properties: { document: doc },
-  },
-  subscribe_agent_requests: {
-    type: 'object',
-    additionalProperties: false,
-    required: ['sink'],
-    properties: {
+    ['document', 'ops'],
+  ),
+  apply_sheet_ops: objectSchema(
+    {
+      document: documentField,
+      ops: opsField(
+        'array of workbook DSL op objects; each op addresses its worksheet with sheet (a name) or sheetId',
+      ),
+      dryRun: {
+        type: 'boolean',
+        description: 'plan the batch and report what would change, without modifying the grid',
+      },
+      baseRevision: baseRevisionField,
+      requestId: requestIdField,
+    },
+    ['document', 'ops'],
+  ),
+  apply_slide_ops: objectSchema(
+    {
+      document: documentField,
+      ops: opsField('array of op objects (at most 50 per transaction)', 50),
+      isolation: {
+        type: 'string',
+        enum: ['atomic', 'per_op'],
+        description: 'atomic (default) applies all-or-nothing; per_op applies independently',
+      },
+      dryRun: {
+        type: 'boolean',
+        description: 'validate and plan the batch without changing the deck',
+      },
+      baseRevision: baseRevisionField,
+      requestId: requestIdField,
+    },
+    ['document', 'ops'],
+  ),
+  read_pdf: objectSchema({ document: documentField, baseRevision: baseRevisionField }, [
+    'document',
+  ]),
+  save_document: objectSchema(
+    {
+      document: documentField,
+      path: {
+        type: 'string',
+        description: "absolute path to save a copy; omit to write the document's own path",
+      },
+      overwrite: {
+        type: 'boolean',
+        description:
+          "allow replacing an existing file at path; the document's own path is overwritten without this",
+      },
+    },
+    ['document'],
+  ),
+  document_status: objectSchema({ document: documentField }, ['document']),
+  subscribe_agent_requests: objectSchema(
+    {
       sink: {
         type: 'object',
-        description: '{ type: "webhook", url, secret? } or { type: "command", argv: string[] }',
+        description: 'webhook { type, url, secret? } or command { type, argv: string[] }',
       },
       filter: {
         type: 'object',
-        description: 'Optional families, paths, and kinds to match',
+        description: 'optional families, paths, and kinds to match',
       },
-      label: { type: 'string' },
-      ttlSec: { type: 'number' },
+      label: { type: 'string', description: 'name shown to the editor' },
+      ttlSec: { type: 'integer', description: 'subscription lifetime in seconds' },
     },
-  },
-  list_agent_subscriptions: { type: 'object', additionalProperties: false, properties: {} },
-  unsubscribe_agent_requests: {
-    type: 'object',
-    additionalProperties: false,
-    required: ['subscriptionId'],
-    properties: { subscriptionId: { type: 'string' } },
-  },
-  get_agent_request: {
-    type: 'object',
-    additionalProperties: false,
-    required: ['requestId'],
-    properties: { requestId: { type: 'string' } },
-  },
-  claim_agent_request: {
-    type: 'object',
-    additionalProperties: false,
-    required: ['requestId'],
-    properties: { requestId: { type: 'string' }, agent: { type: 'string' } },
-  },
-  complete_agent_request: {
-    type: 'object',
-    additionalProperties: false,
-    required: ['requestId', 'status'],
-    properties: {
-      requestId: { type: 'string' },
-      status: { type: 'string', enum: ['done', 'failed'] },
-      summary: { type: 'string' },
-    },
-  },
-  post_agent_message: {
-    type: 'object',
-    additionalProperties: false,
-    required: ['requestId', 'text'],
-    properties: { requestId: { type: 'string' }, text: { type: 'string' } },
-  },
-  list_agent_requests: {
-    type: 'object',
-    additionalProperties: false,
-    properties: {
-      status: {
+    ['sink'],
+  ),
+  list_agent_subscriptions: objectSchema({}),
+  unsubscribe_agent_requests: objectSchema(
+    {
+      subscriptionId: {
         type: 'string',
-        enum: ['pending', 'claimed', 'done', 'failed', 'cancelled'],
+        description: 'id returned by subscribe_agent_requests',
       },
     },
-  },
-  read_selection: {
-    type: 'object',
-    additionalProperties: false,
-    required: ['document'],
-    properties: { document: { type: 'string' }, requestId: { type: 'string' } },
-  },
-  replace_selection: {
-    type: 'object',
-    additionalProperties: false,
-    required: ['document', 'html'],
-    properties: {
-      document: { type: 'string' },
-      html: { type: 'string', description: 'replacement inline HTML' },
-      requestId: { type: 'string' },
-      expectedText: { type: 'string', description: 'text the anchor must still contain' },
-      baseRevision: { type: 'number' },
+    ['subscriptionId'],
+  ),
+  get_agent_request: objectSchema({ requestId: requestIdField }, ['requestId']),
+  claim_agent_request: objectSchema(
+    {
+      requestId: requestIdField,
+      agent: { type: 'string', description: 'name recorded as claimedBy' },
     },
-  },
+    ['requestId'],
+  ),
+  complete_agent_request: objectSchema(
+    {
+      requestId: requestIdField,
+      status: { type: 'string', enum: ['done', 'failed'], description: 'how the request ended' },
+      summary: { type: 'string', description: 'short result shown in the editor' },
+    },
+    ['requestId', 'status'],
+  ),
+  post_agent_message: objectSchema(
+    {
+      requestId: requestIdField,
+      text: { type: 'string', description: 'progress or reply shown in the AI panel' },
+    },
+    ['requestId', 'text'],
+  ),
+  list_agent_requests: objectSchema({
+    status: {
+      type: 'string',
+      enum: ['pending', 'claimed', 'done', 'failed', 'cancelled'],
+      description: 'when set, only requests in this state',
+    },
+  }),
+  read_selection: objectSchema(
+    {
+      document: documentField,
+      requestId: {
+        type: 'string',
+        description: 'when set, read this request anchor instead of the live caret',
+      },
+    },
+    ['document'],
+  ),
+  replace_selection: objectSchema(
+    {
+      document: documentField,
+      html: { type: 'string', description: 'replacement inline HTML' },
+      requestId: requestIdField,
+      expectedText: {
+        type: 'string',
+        description: 'text the anchor must still contain; a mismatch returns selection_changed',
+      },
+      baseRevision: baseRevisionField,
+    },
+    ['document', 'html'],
+  ),
 }
 
 export async function dispatchLiveTool(

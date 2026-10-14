@@ -10,6 +10,7 @@ import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { WebSocket } from 'ws'
+import { liveToolDefinitions } from '@genoffice/editor-control'
 import { resolveAllowed } from '../src/allowed'
 import { startControlService, type ControlService } from '../src/server'
 
@@ -37,6 +38,30 @@ describe('allowed roots', () => {
 })
 
 describe('control service', () => {
+  it('lists live tools with their parameter schemas', async () => {
+    const service = await startControlService({ port: 0, roots: [temp()], userData: temp() })
+    services.push(service)
+    const listed = await fetch(`${service.url}/mcp`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${service.token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
+    })
+    expect(listed.status).toBe(200)
+    const body = (await listed.json()) as {
+      result: { tools: Array<{ name: string; description: string; inputSchema: unknown }> }
+    }
+    expect(body.result.tools).toEqual(
+      liveToolDefinitions().map((tool) => ({
+        name: tool.name,
+        description: tool.description,
+        inputSchema: tool.inputSchema,
+      })),
+    )
+  })
+
   it('round-trips a docx and refuses a path outside the root', async () => {
     const root = temp()
     const userData = temp()

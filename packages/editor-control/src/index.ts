@@ -10,7 +10,7 @@ export { EditorRegistry, LiveError } from './registry.js'
 export {
   dispatchLiveTool,
   liveToolDefinitions,
-  type LiveToolDefinition,
+  type LiveToolInputSchema,
   type LiveToolResult,
 } from './dispatch.js'
 export {

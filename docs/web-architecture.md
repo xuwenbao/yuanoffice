@@ -134,8 +134,11 @@ time. The desktop shell's socket accepts the same command names and answers
 | `get_agent_request` / `claim_agent_request` / `complete_agent_request` / `post_agent_message` / `list_agent_requests` | Agent-request inbox. See `docs/agent-extension.md`                                                                                                  |
 | `subscribe_agent_requests` / `list_agent_subscriptions` / `unsubscribe_agent_requests`                                | Webhook or command callback. Loopback URLs unless `--allow-remote-callback`                                                                         |
 
-`apply_ops` may include `baseRevision`. A mismatch returns `revision_conflict`
-and does not run.
+`POST /mcp` `tools/list` returns each live tool's JSON Schema (`properties` and
+`required`). Names stay the desktop MCP names. Every tool except
+`open_documents` requires `document` (an editor id or absolute path). Reads and
+edits may include `baseRevision`. A mismatch returns `revision_conflict` and
+does not run.
 
 Stable errors: `editor_disconnected`, `unsaved_changes`, `revision_conflict`,
 `file_open_in_gui`, `file_not_found`, `unsupported`, `invalid_argument`,

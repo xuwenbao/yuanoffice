@@ -16,9 +16,11 @@ export default defineConfig({
         replacement: resolve(root, 'src/renderer/platform-electron.web.ts'),
       },
       // Relative imports resolve for unit tests and tsc. The web bundle
-      // replaces the desktop adapter so it is not shipped.
+      // replaces the desktop adapter so it is not shipped. The pattern matches
+      // the whole specifier: Vite replaces only the matched text, and a suffix
+      // match turns "./platform-electron" into a broken "./<abs>" path.
       {
-        find: /(?:^|[/\\])platform-electron(?:\.ts)?$/,
+        find: /^(?:.*[/\\])?platform-electron(?:\.ts)?$/,
         replacement: resolve(root, 'src/renderer/platform-electron.web.ts'),
       },
       {
