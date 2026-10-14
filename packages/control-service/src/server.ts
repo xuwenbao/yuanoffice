@@ -278,7 +278,7 @@ function agentUiEvent(event: {
 }
 
 function onSocket(ws: WebSocket, hub: LiveHub): void {
-  const { registry, sockets, shells, pending, requests, subscriptions } = hub
+  const { registry, sockets, shells, pending, requests } = hub
   let editorId: string | null = null
   ws.on('message', (raw) => {
     let message: Record<string, unknown>
