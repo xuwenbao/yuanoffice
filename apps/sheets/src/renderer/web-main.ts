@@ -22,15 +22,29 @@ async function main(): Promise<void> {
   if (root) root.textContent = `${title} (${bytes.byteLength} bytes)`
   link.publish({ editorId, path, family: 'sheets', title, revision: 0, dirty: false })
   link.onCommand((command) => {
-    if (command.command === 'read_document') {
+    if (command.command === 'read_document' || command.command === 'read_selection') {
       link.reportResult({
         requestId: command.requestId,
         ok: true,
-        result: { title, bytes: bytes.byteLength },
+        result: { title, bytes: bytes.byteLength, note: 'cell edits need the wasm reactor' },
       })
       return
     }
-    link.reportResult({ requestId: command.requestId, ok: false, error: 'unsupported' })
+    if (command.command === 'replace_selection' || command.command === 'apply_sheet_ops') {
+      link.reportResult({
+        requestId: command.requestId,
+        ok: false,
+        reason: 'unsupported',
+        error: 'sheets cell edits are not available until the wasm reactor is built',
+      })
+      return
+    }
+    link.reportResult({
+      requestId: command.requestId,
+      ok: false,
+      reason: 'unsupported',
+      error: 'unsupported',
+    })
   })
 }
 

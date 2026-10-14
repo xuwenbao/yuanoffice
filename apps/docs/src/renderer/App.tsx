@@ -88,7 +88,14 @@ import { textColorValue } from './editor/text-color'
 import { textOutlineCssValue } from './editor/text-outline'
 import { AiAskPopover } from './components/AiAskPopover'
 import { EDIT_QUEUE_MAX, selectionForAnchor, type DocsEditQueueItem } from './ai/edit-queue'
-import { addQueueAnchor, clearQueueAnchors, removeQueueAnchors } from './editor/ai-queue-anchors'
+import {
+  addQueueAnchor,
+  clearQueueAnchors,
+  removeQueueAnchors,
+  setAnchorWorking,
+} from './editor/ai-queue-anchors'
+import { ExternalAgentPanel } from './ai/ExternalAgentPanel'
+import { createBuiltinBackend, createExternalBackend, targetFromSelection } from './ai/backend'
 import {
   asianCharCount,
   countWords,
@@ -613,7 +620,7 @@ const DEFAULT_SETTINGS: AiSettings = {
 /** heading level after a define_style patch: null outlineLevel drops heading status, a number sets it, absent keeps the current */
 export function App() {
   // subscribe to language switches for re-render; strings all go through module-level t, so memoized callbacks never capture stale closures
-  const { lang } = useI18n()
+  const { lang, t } = useI18n()
   const [doc, setDoc] = useState<DocState | null>(null)
   /** a phased open is still streaming the document tail: editor stays read-only */
   const [docLoading, setDocLoading] = useState(false)
@@ -958,6 +965,12 @@ export function App() {
   const editQueueRef = useRef(editQueue)
   editQueueRef.current = editQueue
   const queueSeqRef = useRef(0)
+  const [agentCount, setAgentCount] = useState(0)
+  useEffect(() => {
+    const ai = docsPlatform().ai
+    if (!ai || ai.kind !== 'external') return
+    return ai.requests.onAgents((info) => setAgentCount(info.count))
+  }, [])
   // opening/creating a document drops every anchor with setContent; the queue
   // must not leak the previous file's items (they would sit orphaned at the cap)
   useEffect(() => {
@@ -5343,8 +5356,39 @@ export function App() {
     editor.view.focus()
   }
   const askSendNow = (text: string): void => {
-    setShowAi(true)
-    setAiPreset({ text, nonce: Date.now(), autoRun: true })
+    const ai = docsPlatform().ai
+    if (ai?.kind === 'external') {
+      const anchorId = `q${++queueSeqRef.current}`
+      const target = targetFromSelection(editor, anchorId)
+      if (!target) return
+      setAnchorWorking(editor, anchorId, true)
+      const backend = createExternalBackend(ai.requests)
+      const requestId = backend.submit({
+        kind: 'edit_selection',
+        instruction: text,
+        targets: [target],
+      })
+      setShowAi(true)
+      const stop = ai.requests.onEvent((event) => {
+        if (event.requestId !== requestId) return
+        if (
+          event.event !== 'done' &&
+          event.event !== 'failed' &&
+          event.event !== 'cancelled' &&
+          event.event !== 'rejected'
+        ) {
+          return
+        }
+        setAnchorWorking(editor, anchorId, false)
+        if (event.event === 'done') removeQueueAnchors(editor, [anchorId])
+        stop()
+      })
+      return
+    }
+    createBuiltinBackend((request) => {
+      setShowAi(true)
+      setAiPreset({ text: request.instruction, nonce: Date.now(), autoRun: true })
+    }).submit({ kind: 'edit_selection', instruction: text, targets: [] })
   }
 
   // AI comment tools run the same review-actions code paths as the comments pane
@@ -5971,6 +6015,8 @@ export function App() {
     showGrid ? 'show-grid' : '',
   ].join(' ')
 
+  const aiPort = docsPlatform().ai
+
   return (
     <div
       className={`app ${readMode ? 'read-mode' : ''}${revisionDisplay !== 'all' ? ` rev-display-${revisionDisplay}` : ''}${revisionDisplay === 'all' && viewMode === 'print' ? ' rev-balloon' : ''}`}
@@ -6063,7 +6109,21 @@ export function App() {
       />
 
       <div className="app-main">
-        {doc && docsPlatform().ai && (
+        {doc && aiPort?.kind === 'external' && (
+          <div className={`ai-dock${showAi ? '' : ' collapsed'}`}>
+            <ExternalAgentPanel
+              editor={editor}
+              port={aiPort.requests}
+              editQueue={editQueue}
+              onQueueEditInstruction={queueUpdate}
+              onQueueRemove={queueRemove}
+              onQueueClear={queueClear}
+              onQueueFocus={queueFocus}
+              onQueueConsume={queueConsume}
+            />
+          </div>
+        )}
+        {doc && aiPort?.kind === 'builtin' && (
           <div className={`ai-dock${showAi ? '' : ' collapsed'}`}>
             {/* always mounted: collapse must not drop state or in-flight runs */}
             <AiPanel
@@ -6121,6 +6181,9 @@ export function App() {
                 onQueueAdd={queueAdd}
                 onQueueUpdate={queueUpdate}
                 onQueueRemove={queueRemove}
+                blockedTip={
+                  aiPort?.kind === 'external' && agentCount === 0 ? t('aiNoAgent') : undefined
+                }
               />
             )}
             {doc && <PasteOptionsChip editor={editor} />}

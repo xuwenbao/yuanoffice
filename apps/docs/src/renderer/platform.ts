@@ -3,13 +3,29 @@
  * never through window.desktop. host-electron.ts is the module that reads the
  * preload global.
  */
-import { createPlatformSlot, type AgentControlPort, type DocumentRef } from '@genoffice/platform'
+import {
+  createPlatformSlot,
+  type AgentControlPort,
+  type AgentSubmit,
+  type AgentUiEvent,
+  type AgentsInfo,
+  type DocumentRef,
+} from '@genoffice/platform'
 import type { DesktopApi } from '../shared/ipc'
 import { createElectronDocsPlatform } from './platform-electron'
 
-/** Desktop keeps the in-app agent. The browser host sets this to null. */
-export interface DocsAiPort {
-  enabled: true
+/**
+ * Desktop keeps the in-app agent (`builtin`). The browser host uses `external`:
+ * AI actions become agent requests for a subscribed external agent.
+ * Design: docs/agent-extension.md
+ */
+export type DocsAiPort = { kind: 'builtin' } | { kind: 'external'; requests: ExternalAgentPort }
+
+export interface ExternalAgentPort {
+  submit(request: AgentSubmit): void
+  cancel(requestId: string): void
+  onEvent(handler: (event: AgentUiEvent) => void): () => void
+  onAgents(handler: (info: AgentsInfo) => void): () => void
 }
 
 export interface DocsFilePort {

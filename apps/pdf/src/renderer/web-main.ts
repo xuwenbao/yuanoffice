@@ -59,9 +59,23 @@ async function main(): Promise<void> {
       dirty = false
       return
     }
+    if (command.command === 'read_selection') {
+      link.reportResult({ requestId: command.requestId, ok: true, result: text })
+      return
+    }
+    if (command.command === 'replace_selection') {
+      link.reportResult({
+        requestId: command.requestId,
+        ok: false,
+        reason: 'unsupported',
+        error: 'PDF text cannot be rewritten in the browser host; add an annotation instead',
+      })
+      return
+    }
     link.reportResult({
       requestId: command.requestId,
       ok: false,
+      reason: 'unsupported',
       error: 'unsupported',
     })
   })

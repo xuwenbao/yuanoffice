@@ -1,9 +1,15 @@
+/**
+ * Design: docs/agent-extension.md
+ */
 import { docsPlatform } from './platform'
 import type { Editor } from '@tiptap/react'
 import { BLANK_BULLET_NUM_ID, BLANK_ORDERED_NUM_ID } from '@genoffice/docx-engine'
 import type { McpCommandMessage, McpEditorCommand } from '../shared/ipc'
+import { externalTrack, rememberSnapshot } from './ai/agent-runs'
+import { blockRange } from './ai/backend'
+import { queueAnchorRange } from './editor/ai-queue-anchors'
 import { executeTool, markDocSeen } from './ai/tools'
-import { findNumId, type NumIds } from './ai/protocol'
+import { findNumId, type NumIds, type SelectionScope } from './ai/protocol'
 import { save, type FileActionContext } from './file-actions'
 
 /**
@@ -37,15 +43,35 @@ function numIdsFor(ctx: FileActionContext): NumIds {
 interface InsertContentInput {
   html: string
   afterBlockIndex?: number
+  requestId?: string
 }
 interface ReplaceBlocksInput {
   startBlockIndex: number
   endBlockIndex: number
   html: string
+  requestId?: string
 }
 interface ApplyOpsInput {
   ops: unknown[]
   dryRun?: boolean
+  requestId?: string
+}
+
+interface SelectionInput {
+  requestId?: string
+  html?: string
+  expectedText?: string
+  anchorId?: string
+  targets?: Array<{ anchorId?: string; text?: string }>
+}
+
+class CommandError extends Error {
+  constructor(
+    message: string,
+    readonly reason?: string,
+  ) {
+    super(message)
+  }
 }
 
 /** mirror of AiPanel's clearAiHighlights: auto-accept the external edit, keeping undo history */
@@ -108,9 +134,10 @@ async function runCommand(
         editor,
         { id: 'mcp', name: 'insert_content', input: { ...input } },
         numIdsFor(ctx),
+        beginAgentEdit(editor, input.requestId),
       )
       if (outcome.isError) throw new Error(mcpErrorText(outcome.output))
-      clearAiChangedFlags(editor)
+      finishAgentEdit(editor, input.requestId)
       return { summary: outcome.summary, mutated: outcome.mutated }
     }
 
@@ -121,9 +148,10 @@ async function runCommand(
         editor,
         { id: 'mcp', name: 'replace_blocks', input: { ...input } },
         numIdsFor(ctx),
+        beginAgentEdit(editor, input.requestId),
       )
       if (outcome.isError) throw new Error(mcpErrorText(outcome.output))
-      clearAiChangedFlags(editor)
+      finishAgentEdit(editor, input.requestId)
       return { summary: outcome.summary, mutated: outcome.mutated }
     }
 
@@ -141,9 +169,10 @@ async function runCommand(
           input: { ops: input.ops, ...(input.dryRun === true ? { dryRun: true } : {}) },
         },
         numIdsFor(ctx),
+        input.dryRun === true ? undefined : beginAgentEdit(editor, input.requestId),
       )
       if (outcome.isError) throw new Error(mcpErrorText(outcome.output))
-      if (input.dryRun !== true) clearAiChangedFlags(editor)
+      if (input.dryRun !== true) finishAgentEdit(editor, input.requestId)
       return { summary: outcome.summary, output: outcome.output, mutated: outcome.mutated }
     }
 
@@ -156,6 +185,12 @@ async function runCommand(
       if (outcome.isError) throw new Error(mcpErrorText(outcome.output))
       return { text: outcome.output }
     }
+
+    case 'read_selection':
+      return readSelection(editor, (payload ?? {}) as SelectionInput)
+
+    case 'replace_selection':
+      return replaceSelection(editor, (payload ?? {}) as SelectionInput, numIdsFor(ctx))
 
     case 'save_document': {
       const input = (payload ?? {}) as { path?: string; overwrite?: boolean }
@@ -214,6 +249,88 @@ async function announceWhenLoaded(
   }
 }
 
+function beginAgentEdit(editor: Editor, requestId?: string) {
+  if (!requestId) return undefined
+  rememberSnapshot(editor, requestId)
+  return externalTrack()
+}
+
+function finishAgentEdit(editor: Editor, requestId?: string): void {
+  if (!requestId || externalTrack()) clearAiChangedFlags(editor)
+}
+
+function anchorOf(input: SelectionInput): string | undefined {
+  if (typeof input.anchorId === 'string' && input.anchorId) return input.anchorId
+  const first = input.targets?.[0]
+  return typeof first?.anchorId === 'string' ? first.anchorId : undefined
+}
+
+function normText(text: string): string {
+  return text.replace(/\s+/g, ' ').trim()
+}
+
+function readSelection(editor: Editor, input: SelectionInput) {
+  const range = anchoredRange(editor, input)
+  if (!range) return { text: '', marked: '', blocks: null }
+  const blocks = blockRange(editor, range.from, range.to)
+  const text = normText(editor.state.doc.textBetween(range.from, range.to, '\n', ' '))
+  const $from = editor.state.doc.resolve(range.from)
+  const body = $from.parent.textContent
+  const start = $from.start()
+  const relFrom = Math.max(0, range.from - start)
+  const relTo = Math.max(relFrom, range.to - start)
+  const marked = `${body.slice(0, relFrom)}<sel>${body.slice(relFrom, relTo)}</sel>${body.slice(relTo)}`
+  return { text, marked, blocks }
+}
+
+function anchoredRange(editor: Editor, input: SelectionInput): { from: number; to: number } | null {
+  const anchorId = anchorOf(input)
+  if (anchorId) return queueAnchorRange(editor.state, anchorId)
+  const { from, to, empty } = editor.state.selection
+  return empty ? null : { from, to }
+}
+
+async function replaceSelection(editor: Editor, input: SelectionInput, numIds: NumIds) {
+  if (typeof input.html !== 'string') throw new Error('replace_selection requires "html"')
+  const range = anchoredRange(editor, input)
+  if (!range) {
+    throw new CommandError(
+      'nothing is selected: replace_selection needs the anchored range',
+      'selection_changed',
+    )
+  }
+  const blocks = blockRange(editor, range.from, range.to)
+  if (blocks[0] !== blocks[1]) {
+    throw new CommandError(
+      'the selection spans several blocks; use replace_blocks for that range',
+      'unsupported',
+    )
+  }
+  const text = normText(editor.state.doc.textBetween(range.from, range.to, ' ', ' '))
+  if (typeof input.expectedText === 'string' && normText(input.expectedText) !== text) {
+    throw new CommandError('the anchored text changed before the edit', 'selection_changed')
+  }
+  const scope: SelectionScope = {
+    startIndex: blocks[0],
+    endIndex: blocks[1],
+    isRange: true,
+    from: range.from,
+    to: range.to,
+  }
+  markDocSeen(editor)
+  const outcome = await executeTool(
+    editor,
+    { id: 'mcp', name: 'replace_selection', input: { html: input.html } },
+    numIds,
+    beginAgentEdit(editor, input.requestId),
+    undefined,
+    { scope, doc: editor.state.doc },
+  )
+  if (outcome.isError) throw new Error(mcpErrorText(outcome.output))
+  finishAgentEdit(editor, input.requestId)
+  return { summary: outcome.summary, mutated: outcome.mutated }
+}
+
 /** Subscribe the live editor to MCP commands. Returns the unsubscribe function. */
 export function installMcpBridge(deps: McpBridgeDeps): () => void {
   const control = docsPlatform().agentControl
@@ -232,6 +349,7 @@ export function installMcpBridge(deps: McpBridgeDeps): () => void {
           requestId: message.requestId,
           ok: false,
           error: error instanceof Error ? error.message : String(error),
+          ...(error instanceof CommandError && error.reason ? { reason: error.reason } : {}),
         })
       }
     })

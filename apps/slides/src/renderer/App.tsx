@@ -4515,6 +4515,23 @@ export function App() {
               : (instruction) => {
                   askClosedAtRef.current = Date.now()
                   setAskState(null)
+                  const control = slidesPlatform().agentControl
+                  if (control) {
+                    control.submitRequest({
+                      requestId: crypto.randomUUID(),
+                      kind: 'edit_selection',
+                      instruction,
+                      targets: [
+                        {
+                          family: 'slides',
+                          slide: current,
+                          elements: askTargets.map((target) => target.sourceId),
+                          text: askScopeQuote() ?? '',
+                        },
+                      ],
+                    })
+                    return
+                  }
                   // Carry the popover's frozen durable targets into the run.
                   // The canvas keeps parse-time source ids for rendering, while
                   // the AI inventory and edit tools speak durable ids.

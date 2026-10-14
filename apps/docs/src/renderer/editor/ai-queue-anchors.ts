@@ -13,7 +13,7 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view'
  */
 
 interface AnchorMeta {
-  add?: { qid: string; from: number; to: number }
+  add?: { qid: string; from: number; to: number; working?: boolean }
   remove?: string[]
   clear?: boolean
 }
@@ -49,8 +49,12 @@ export const AiQueueAnchorsExtension = Extension.create({
                 Decoration.inline(
                   meta.add.from,
                   meta.add.to,
-                  { class: 'ai-queue-anchor' },
-                  { qid: meta.add.qid },
+                  {
+                    class: meta.add.working
+                      ? 'ai-queue-anchor ai-queue-anchor-working'
+                      : 'ai-queue-anchor',
+                  },
+                  { qid: meta.add.qid, working: meta.add.working === true },
                 ),
               ])
             }
@@ -83,6 +87,13 @@ const anchorMeta = (editor: Editor, meta: AnchorMeta): void => {
 
 export function addQueueAnchor(editor: Editor, qid: string, from: number, to: number): void {
   anchorMeta(editor, { add: { qid, from, to } })
+}
+
+/** Mark an anchor as in progress. The decoration is recreated so the class updates. */
+export function setAnchorWorking(editor: Editor, qid: string, working: boolean): void {
+  const range = queueAnchorRange(editor.state, qid)
+  if (!range) return
+  anchorMeta(editor, { remove: [qid], add: { qid, from: range.from, to: range.to, working } })
 }
 
 export function removeQueueAnchors(editor: Editor, qids: string[]): void {

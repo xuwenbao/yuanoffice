@@ -96,7 +96,37 @@ export async function installSheetsHost(): Promise<void> {
     },
   })
   link.onCommand((command) => {
-    link.reportResult({ requestId: command.requestId, ok: false, error: 'unsupported' })
+    const payload = (command.payload ?? {}) as {
+      targets?: Array<{ sheet?: string; range?: string }>
+    }
+    if (command.command === 'read_document' || command.command === 'read_selection') {
+      const target = payload.targets?.[0]
+      link.reportResult({
+        requestId: command.requestId,
+        ok: true,
+        result: {
+          path: currentPath,
+          ...(target ? { sheet: target.sheet, range: target.range } : {}),
+          note: 'cell edits need the wasm reactor',
+        },
+      })
+      return
+    }
+    if (command.command === 'replace_selection' || command.command === 'apply_sheet_ops') {
+      link.reportResult({
+        requestId: command.requestId,
+        ok: false,
+        reason: 'unsupported',
+        error: 'sheets cell edits are not available until the wasm reactor is built',
+      })
+      return
+    }
+    link.reportResult({
+      requestId: command.requestId,
+      ok: false,
+      reason: 'unsupported',
+      error: `${command.command} is not available in the sheets browser host`,
+    })
   })
 
   function ensureWorker(): Worker {

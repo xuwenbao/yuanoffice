@@ -2,7 +2,7 @@
 name: genoffice
 description: Create, convert, read and edit Office documents locally with GenOffice's command line. Build a new presentation (pptx) from a brief through a checked outline, per-page spec and render pipeline, a new spreadsheet (xlsx) from CSV or JSON data with formulas, a new Word document (docx) from Markdown or HTML, or a PDF; convert between pdf, docx, xlsx, pptx, md, html and csv; read the structure and text of an existing file (including the user's own docx / xlsx / pptx as source material) and apply structured edits to it. Use whenever the user asks for a slide deck, presentation, spreadsheet, workbook, report, Word document or any real Office file, a format conversion, a rewrite of part of an existing document, or wants the result opened in the GenOffice editor. Documents are processed locally; only search, image and media send the query or the referenced file to the provider configured in GenOffice.
 metadata:
-  version: 2.52.0
+  version: 2.53.0
   cli: '>=0.9.0'
 ---
 
@@ -218,3 +218,33 @@ echo '[{"op":"insert_content","afterBlockIndex":0,"html":"<p>Executive summary.<
 - Conversions to PDF run inside the GenOffice app (hidden, a few seconds each); they need GenOffice installed, or `GENOFFICE_APP_BIN` pointing at it; the same holds for `docx→html` and `html→docx`.
 - `add_pivot` writes the pivot's cells at `targetCell` (no values or formulas there, on a sheet that already exists in the file) plus a native pivot Excel refreshes, source formulas are evaluated from the file so set them in an earlier batch; `add_sparkline` writes one in-cell sparkline per data row (at most 200 rows per op); `convert_to_values` replaces formulas with the values the workbook engine computes from the file (error results keep their formula; cell edits go in an earlier batch); `set_page_setup` also takes `printTitles`, `header`/`footer` and `rowBreaks`/`colBreaks`. Excel ops that still need the live editor (`refresh_pivot`, edits to session-created tables and shapes) are refused with the reason. `add_conditional_format` and `set_data_validation` add to the rules a sheet already has (`set_data_validation` on a range that has one replaces it, `null` removes it); `clear_conditional_formats` starts over.
 - Formulas are evaluated with the workbook engine after writing, so `sheet read` and cached-value readers see numbers.
+
+## Agent requests ("AI edit")
+
+When the user clicks AI edit in the browser editor, the control service emits `request.created` to a subscribed webhook or command. The body is a summary (`requestId`, path, kind, a short instruction preview). It does not contain the document. The in-app loop's guards (claimed-action check, turn cap, identical-turn check) do not run for this path: you execute the tools yourself.
+
+1. `claim_agent_request` with `{ requestId }`. A second claim returns `request_claimed`.
+2. `get_agent_request` with `{ requestId }`. Read the `<sel>…</sel>` span in `context.marked`.
+3. `replace_selection` with `{ document, requestId, html, expectedText }`. `expectedText` is the anchor text from the request. A mismatch returns `selection_changed` and does not edit. A docs target that spans several blocks is refused; use `replace_blocks` with the same `requestId`.
+4. `post_agent_message` to show progress, then `complete_agent_request` with `{ requestId, status: "done"|"failed", summary }`.
+5. Do not call `save_document` unless the user asked to save. `persisted: false` means the page changed and the file did not.
+
+`list_agent_requests` is the inbox when you are already in a session and the user says to handle the edits they marked. It does not block.
+
+Subscribe once per control service:
+
+```
+POST /mcp  tools/call subscribe_agent_requests
+{ "sink": { "type": "webhook", "url": "http://127.0.0.1:9/hook" } }
+```
+
+Or start the service with a sink. Webhook hosts must be loopback unless `--allow-remote-callback` is set. Verify `X-GenOffice-Signature: sha256=<hmac of the raw body>` with the secret returned by subscribe (or printed for `--agent-webhook`).
+
+```
+genoffice serve --root . --agent-webhook http://127.0.0.1:8788/hook
+genoffice serve --root . --agent-command '["claude","-p","Handle GENOFFICE_REQUEST_ID via the MCP server at GENOFFICE_MCP_URL"]'
+```
+
+The command is spawned without a shell. `GENOFFICE_REQUEST_ID` and `GENOFFICE_MCP_URL` are in the environment; `{requestId}` and `{mcpUrl}` in argv are replaced too.
+
+Cursor: point a webhook at a small loopback receiver that calls your agent with the `requestId`, then have that agent call the control service over MCP (the same `tools/call` flow above). Claude Code: the `--agent-command` form runs `claude -p` per request; the prompt should tell it to claim, read, replace, and complete that id and not to use its own shell to rewrite the file.

@@ -41,18 +41,35 @@ async function main(): Promise<void> {
       postCloseResult('close-save-result', requestId, true)
     },
   })
+  let bodyText = title
   link.onCommand((command) => {
-    if (command.command === 'read_document') {
+    const payload = (command.payload ?? {}) as { ops?: unknown[]; html?: string }
+    if (command.command === 'read_document' || command.command === 'read_selection') {
       link.reportResult({
         requestId: command.requestId,
         ok: true,
-        result: { title, bytes: bytes.byteLength },
+        result: { title, bytes: bytes.byteLength, text: bodyText },
+      })
+      return
+    }
+    if (command.command === 'apply_slide_ops') {
+      bodyText += `\n${JSON.stringify(payload.ops ?? [])}`
+      link.reportResult({ requestId: command.requestId, ok: true, result: { applied: true } })
+      return
+    }
+    if (command.command === 'replace_selection') {
+      bodyText = String(payload.html ?? '').replace(/<[^>]+>/g, '')
+      link.reportResult({
+        requestId: command.requestId,
+        ok: true,
+        result: { applied: true, text: bodyText },
       })
       return
     }
     link.reportResult({
       requestId: command.requestId,
       ok: false,
+      reason: 'unsupported',
       error: 'unsupported',
     })
   })

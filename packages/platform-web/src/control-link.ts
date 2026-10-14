@@ -1,10 +1,18 @@
-import type { AgentCommand, LiveEditorState } from '@genoffice/platform'
+import type {
+  AgentCommand,
+  AgentSubmit,
+  AgentUiEvent,
+  AgentsInfo,
+  LiveEditorState,
+} from '@genoffice/platform'
 
 type ServerMessage =
   | { type: 'welcome' }
   | { type: 'command'; requestId: string; editorId: string; command: string; payload: unknown }
   | { type: 'open'; path: string; editorId: string }
   | { type: 'focus'; editorId: string }
+  | ({ type: 'agent_event' } & AgentUiEvent)
+  | ({ type: 'agents' } & AgentsInfo)
 
 /**
  * WebSocket client for one editor page or the shell.
@@ -19,6 +27,8 @@ export class ControlLink {
   private commandHandler: ((command: AgentCommand) => void) | null = null
   private openHandler: ((path: string, editorId: string) => void) | null = null
   private focusHandler: ((editorId: string) => void) | null = null
+  private readonly agentEventHandlers = new Set<(event: AgentUiEvent) => void>()
+  private readonly agentsHandlers = new Set<(info: AgentsInfo) => void>()
 
   constructor(
     private readonly url: string,
@@ -70,13 +80,41 @@ export class ControlLink {
     this.send({ type: 'state', ...state })
   }
 
-  reportResult(result: { requestId: string; ok: boolean; result?: unknown; error?: string }): void {
+  reportResult(result: {
+    requestId: string
+    ok: boolean
+    result?: unknown
+    error?: string
+    reason?: string
+  }): void {
     this.send({ type: 'result', ...result })
   }
 
   closeEditor(editorId: string, dirty: boolean): void {
     this.send({ type: 'unregister', editorId, dirty })
     if (this.state?.editorId === editorId) this.state = null
+  }
+
+  submitRequest(request: AgentSubmit): void {
+    this.send({
+      type: 'agent_request',
+      editorId: this.state?.editorId,
+      ...request,
+    })
+  }
+
+  cancelRequest(requestId: string): void {
+    this.send({ type: 'agent_cancel', requestId })
+  }
+
+  onAgentEvent(handler: (event: AgentUiEvent) => void): () => void {
+    this.agentEventHandlers.add(handler)
+    return () => this.agentEventHandlers.delete(handler)
+  }
+
+  onAgentsChanged(handler: (info: AgentsInfo) => void): () => void {
+    this.agentsHandlers.add(handler)
+    return () => this.agentsHandlers.delete(handler)
   }
 
   private connect(): void {
@@ -105,6 +143,12 @@ export class ControlLink {
         this.openHandler?.(message.path, message.editorId)
       } else if (message.type === 'focus') {
         this.focusHandler?.(message.editorId)
+      } else if (message.type === 'agent_event') {
+        for (const handler of this.agentEventHandlers) handler(message)
+      } else if (message.type === 'agents') {
+        for (const handler of this.agentsHandlers) {
+          handler({ count: message.count, labels: message.labels })
+        }
       }
     })
     socket.addEventListener('close', () => {

@@ -179,4 +179,11 @@ export const ko = {
   aiCmdImages: '이미지 {count}장을 업데이트했습니다',
   aiCmdToc: '목차를 삽입했습니다({count}개 항목)',
   aiCmdSkipped: ' (보호된 블록 {count}개 건너뜀)',
+  aiNoAgent: 'No external agent is connected',
+  aiAgentWorking: 'External agent is working…',
+  aiAgentDone: 'The edit is done',
+  aiAgentFailed: 'The external agent could not finish',
+  aiExternalPanelTitle: 'External agent',
+  aiExternalHint: 'Edit requests are sent to the subscribed external agent',
+  aiRollbackRun: 'Undo this edit',
 } satisfies Record<keyof typeof zh, string>

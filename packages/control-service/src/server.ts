@@ -20,12 +20,17 @@ import {
   type ControlRequest,
 } from '@genoffice/cli/control-protocol'
 import {
+  AgentRequestStore,
+  AgentSubscriptions,
+  callbackBody,
   dispatchLiveTool,
   EditorRegistry,
   LiveError,
   liveToolDefinitions,
+  type AgentTarget,
   type EditorFamily,
 } from '@genoffice/editor-control'
+import { deliverAgentEvent, parseCommandArgv } from './agent-delivery.js'
 import { WebSocket, WebSocketServer } from 'ws'
 import { resolveAllowed, type AllowedRoots } from './allowed.js'
 import { atomicWriteFile } from './atomic-write.js'
@@ -40,12 +45,20 @@ export interface ControlServiceOptions {
   /** Built web shell. Omitted in tests that only exercise the API. */
   staticDir?: string
   leaseMs?: number
+  /** Static webhook called for agent requests. Loopback unless allowRemoteCallback is set. */
+  agentWebhook?: string
+  /** argv JSON array, or a whitespace-separated command, spawned for each agent request. */
+  agentCommand?: string
+  /** Allow webhook hosts other than loopback. Off by default. */
+  allowRemoteCallback?: boolean
 }
 
 export interface ControlService {
   port: number
   token: string
   url: string
+  /** Present when a static webhook subscription was installed. Shown once so the caller can verify signatures. */
+  agentWebhookSecret?: string
   close(): Promise<void>
 }
 
@@ -61,10 +74,34 @@ const FAMILIES = new Set<EditorFamily>(['docs', 'pdf', 'slides', 'sheets'])
 export async function startControlService(options: ControlServiceOptions): Promise<ControlService> {
   const allowed = resolveAllowed(options.roots)
   const registry = new EditorRegistry(options.leaseMs ?? 15_000)
+  const requests = new AgentRequestStore()
+  const subscriptions = new AgentSubscriptions()
   const token = randomBytes(24).toString('hex')
   const sockets = new Map<string, WebSocket>()
   const shells = new Set<WebSocket>()
   const pending = new Map<string, Pending>()
+  let mcpUrl = ''
+  const hub: LiveHub = {
+    registry,
+    sockets,
+    shells,
+    pending,
+    requests,
+    subscriptions,
+    allowRemoteCallback: options.allowRemoteCallback === true,
+    mcpUrl: () => mcpUrl,
+    publish: () => publish(options.userData, registry),
+  }
+  requests.on((event) => {
+    const body = callbackBody(event)
+    if (body) {
+      for (const subscription of subscriptions.matching(event.request)) {
+        deliverAgentEvent(subscription, body, { mcpUrl })
+      }
+    }
+    const ui = agentUiEvent(event)
+    if (ui) sendEditor(hub, event.request.editorId, ui)
+  })
   mkdirSync(options.userData, { recursive: true })
 
   const http = createHttp((req, res) => {
@@ -72,8 +109,12 @@ export async function startControlService(options: ControlServiceOptions): Promi
       token,
       allowed,
       registry,
+      requests,
+      subscriptions,
+      allowRemoteCallback: hub.allowRemoteCallback,
+      onAgentsChanged: () => broadcastAgents(hub),
       staticDir: options.staticDir,
-      publish: () => publish(options.userData, registry),
+      publish: hub.publish,
     }).catch((error) => sendJson(res, 500, { error: 'internal', message: errorMessage(error) }))
   })
 
@@ -88,6 +129,7 @@ export async function startControlService(options: ControlServiceOptions): Promi
   if (!address || typeof address === 'string') throw new Error('control service failed to bind')
   const port = address.port
   const url = `http://127.0.0.1:${port}`
+  mcpUrl = `${url}/mcp`
 
   const wss = new WebSocketServer({ noServer: true })
   http.on('upgrade', (req, socket, head) => {
@@ -100,17 +142,39 @@ export async function startControlService(options: ControlServiceOptions): Promi
       socket.destroy()
       return
     }
-    wss.handleUpgrade(req, socket, head, (ws) =>
-      onSocket(ws, registry, sockets, shells, pending, () => publish(options.userData, registry)),
-    )
+    wss.handleUpgrade(req, socket, head, (ws) => onSocket(ws, hub))
   })
 
   const net = await listenControlSocket(options.userData, token, (request) =>
-    controlCommand(request, registry, allowed, shells),
+    controlCommand(request, registry, allowed, shells, hub),
   )
+  let agentWebhookSecret: string | undefined
+  if (options.agentWebhook) {
+    agentWebhookSecret = randomBytes(16).toString('hex')
+    subscriptions.subscribe({
+      id: 'static-webhook',
+      label: 'agent-webhook',
+      sink: { type: 'webhook', url: options.agentWebhook, secret: agentWebhookSecret },
+      allowRemoteCallback: hub.allowRemoteCallback,
+    })
+  }
+  if (options.agentCommand) {
+    subscriptions.subscribe({
+      id: 'static-command',
+      label: 'agent-command',
+      sink: { type: 'command', argv: parseCommandArgv(options.agentCommand) },
+      allowRemoteCallback: hub.allowRemoteCallback,
+    })
+  }
   publish(options.userData, registry)
   const lease = setInterval(() => {
+    const before = new Set(registry.list().map((session) => session.editorId))
     registry.expire()
+    for (const editorId of before) {
+      if (!registry.list().some((session) => session.editorId === editorId)) {
+        requests.cancelEditor(editorId)
+      }
+    }
     publish(options.userData, registry)
   }, 1_000)
   lease.unref?.()
@@ -119,6 +183,7 @@ export async function startControlService(options: ControlServiceOptions): Promi
     port,
     token,
     url,
+    ...(agentWebhookSecret ? { agentWebhookSecret } : {}),
     async close() {
       clearInterval(lease)
       for (const entry of pending.values()) {
@@ -145,14 +210,75 @@ export async function startControlService(options: ControlServiceOptions): Promi
   }
 }
 
-function onSocket(
-  ws: WebSocket,
-  registry: EditorRegistry,
-  sockets: Map<string, WebSocket>,
-  shells: Set<WebSocket>,
-  pending: Map<string, Pending>,
-  publishNow: () => void,
-): void {
+interface LiveHub {
+  registry: EditorRegistry
+  sockets: Map<string, WebSocket>
+  shells: Set<WebSocket>
+  pending: Map<string, Pending>
+  requests: AgentRequestStore
+  subscriptions: AgentSubscriptions
+  allowRemoteCallback: boolean
+  mcpUrl: () => string
+  publish: () => void
+}
+
+function broadcastAgents(hub: LiveHub): void {
+  const subscriptions = hub.subscriptions.list()
+  const body = JSON.stringify({
+    type: 'agents',
+    count: subscriptions.length,
+    labels: subscriptions.map((subscription) => subscription.label),
+  })
+  for (const socket of hub.sockets.values()) {
+    if (socket.readyState === WebSocket.OPEN) socket.send(body)
+  }
+  for (const shell of hub.shells) {
+    if (shell.readyState === WebSocket.OPEN) shell.send(body)
+  }
+}
+
+function sendEditor(hub: LiveHub, editorId: string, message: Record<string, unknown>): void {
+  const socket = hub.sockets.get(editorId)
+  if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message))
+}
+
+function agentUiEvent(event: {
+  type: string
+  request: { requestId: string; status: string; claimedBy?: string; summary?: string }
+  text?: string
+}): Record<string, unknown> | null {
+  if (event.type === 'claimed') {
+    return {
+      type: 'agent_event',
+      requestId: event.request.requestId,
+      event: 'claimed',
+      ...(event.request.claimedBy ? { claimedBy: event.request.claimedBy } : {}),
+    }
+  }
+  if (event.type === 'message') {
+    return {
+      type: 'agent_event',
+      requestId: event.request.requestId,
+      event: 'message',
+      text: event.text ?? '',
+    }
+  }
+  if (event.type === 'completed') {
+    return {
+      type: 'agent_event',
+      requestId: event.request.requestId,
+      event: event.request.status,
+      summary: event.request.summary ?? '',
+    }
+  }
+  if (event.type === 'cancelled') {
+    return { type: 'agent_event', requestId: event.request.requestId, event: 'cancelled' }
+  }
+  return null
+}
+
+function onSocket(ws: WebSocket, hub: LiveHub): void {
+  const { registry, sockets, shells, pending, requests } = hub
   let editorId: string | null = null
   ws.on('message', (raw) => {
     let message: Record<string, unknown>
@@ -163,6 +289,19 @@ function onSocket(
     }
     if (message.type === 'hello' && message.role === 'shell') {
       shells.add(ws)
+      broadcastAgents(hub)
+      return
+    }
+    if (message.type === 'agent_request') {
+      acceptAgentRequest(ws, hub, editorId, message)
+      return
+    }
+    if (message.type === 'agent_cancel' && typeof message.requestId === 'string') {
+      try {
+        requests.cancel(message.requestId)
+      } catch {
+        /* an unknown id is already gone */
+      }
       return
     }
     if (message.type === 'register' && typeof message.editorId === 'string') {
@@ -181,7 +320,8 @@ function onSocket(
         run: (command, payload) =>
           callEditor(editorId!, command, payload, sockets, shells, pending),
       })
-      publishNow()
+      hub.publish()
+      broadcastAgents(hub)
     } else if (message.type === 'state' && typeof message.editorId === 'string') {
       registry.update(message.editorId, {
         ...(typeof message.revision === 'number' ? { revision: message.revision } : {}),
@@ -196,12 +336,16 @@ function onSocket(
       if (message.ok === true) entry.resolve(message.result)
       else
         entry.reject(
-          new Error(typeof message.error === 'string' ? message.error : 'command failed'),
+          new LiveError(
+            typeof message.reason === 'string' ? message.reason : 'unsupported',
+            typeof message.error === 'string' ? message.error : 'command failed',
+          ),
         )
     } else if (message.type === 'unregister' && typeof message.editorId === 'string') {
       registry.unregister(message.editorId, message.dirty === true)
       sockets.delete(message.editorId)
-      publishNow()
+      requests.cancelEditor(message.editorId)
+      hub.publish()
     }
   })
   ws.on('close', () => {
@@ -209,7 +353,7 @@ function onSocket(
     if (!editorId) return
     sockets.delete(editorId)
     registry.markDisconnected(editorId)
-    publishNow()
+    hub.publish()
     for (const [requestId, entry] of pending) {
       if (entry.editorId !== editorId) continue
       pending.delete(requestId)
@@ -225,7 +369,63 @@ const MUTATING = new Set([
   'apply_ops',
   'apply_sheet_ops',
   'apply_slide_ops',
+  'replace_selection',
 ])
+
+function acceptAgentRequest(
+  ws: WebSocket,
+  hub: LiveHub,
+  editorId: string | null,
+  message: Record<string, unknown>,
+): void {
+  const requestId =
+    typeof message.requestId === 'string' ? message.requestId : randomBytes(8).toString('hex')
+  const reply = (event: string, extra: Record<string, unknown> = {}) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'agent_event', requestId, event, ...extra }))
+    }
+  }
+  try {
+    if (!editorId) {
+      reply('rejected', {
+        reason: 'invalid_argument',
+        error: 'register before submitting an agent request',
+      })
+      return
+    }
+    const session = hub.registry.resolve(editorId)
+    const kind = message.kind
+    if (kind !== 'edit_selection' && kind !== 'queue_batch' && kind !== 'chat') {
+      reply('rejected', { reason: 'invalid_argument', error: 'unknown agent request kind' })
+      return
+    }
+    if (
+      hub.subscriptions.matching({ family: session.family, path: session.path, kind }).length === 0
+    ) {
+      reply('rejected', {
+        reason: 'no_agent_subscribed',
+        error: 'no external agent is subscribed',
+      })
+      return
+    }
+    hub.requests.submit({
+      requestId,
+      editorId,
+      path: session.path,
+      family: session.family,
+      kind,
+      instruction: typeof message.instruction === 'string' ? message.instruction : '',
+      targets: Array.isArray(message.targets) ? (message.targets as AgentTarget[]) : [],
+      revisionAtCreate: session.revision,
+    })
+    reply('accepted')
+  } catch (error) {
+    reply('rejected', {
+      reason: error instanceof LiveError ? error.reason : 'invalid_argument',
+      error: errorMessage(error),
+    })
+  }
+}
 
 function callEditor(
   editorId: string,
@@ -260,6 +460,10 @@ interface HttpCtx {
   token: string
   allowed: AllowedRoots
   registry: EditorRegistry
+  requests: AgentRequestStore
+  subscriptions: AgentSubscriptions
+  allowRemoteCallback: boolean
+  onAgentsChanged: () => void
   staticDir?: string
   publish: () => void
 }
@@ -427,6 +631,10 @@ async function mcpResponse(
     try {
       const result = await dispatchLiveTool(ctx.registry, name, args, {
         save: (session, path, overwrite) => saveEditor(session, path, overwrite, ctx.allowed),
+        requests: ctx.requests,
+        subscriptions: ctx.subscriptions,
+        allowRemoteCallback: ctx.allowRemoteCallback,
+        onAgentsChanged: ctx.onAgentsChanged,
       })
       return {
         jsonrpc: '2.0',
@@ -496,6 +704,7 @@ async function controlCommand(
   registry: EditorRegistry,
   allowed: AllowedRoots,
   shells: Set<WebSocket>,
+  hub?: LiveHub,
 ): Promise<ControlReply> {
   try {
     if (request.cmd === 'open') {
@@ -547,7 +756,17 @@ async function controlCommand(
           ? { path: request.path, overwrite: request.overwrite }
           : {}),
       },
-      { save: (session, path, overwrite) => saveEditor(session, path, overwrite, allowed) },
+      {
+        save: (session, path, overwrite) => saveEditor(session, path, overwrite, allowed),
+        ...(hub
+          ? {
+              requests: hub.requests,
+              subscriptions: hub.subscriptions,
+              allowRemoteCallback: hub.allowRemoteCallback,
+              onAgentsChanged: () => broadcastAgents(hub),
+            }
+          : {}),
+      },
     )
     return { ok: true, result }
   } catch (error) {
@@ -757,6 +976,8 @@ const HARNESS = `<!doctype html>
 <meta charset="utf-8">
 <title>Harness</title>
 <div id="doc"></div>
+<button id="ask" type="button">AI 修改</button>
+<div id="status"></div>
 <script>
 const params = new URLSearchParams(location.search)
 const editorId = params.get('editorId') || 'harness'
@@ -764,25 +985,55 @@ const path = params.get('path') || ''
 let revision = 0
 let dirty = false
 let text = params.get('text') || 'hello'
-document.getElementById('doc').textContent = text
+const doc = document.getElementById('doc')
+const status = document.getElementById('status')
+doc.textContent = text
 const token = document.cookie.split('; ').find((p) => p.startsWith('genoffice_token='))?.split('=')[1]
 const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws')
+function paint() { doc.textContent = text }
 ws.addEventListener('open', () => {
   ws.send(JSON.stringify({ type: 'hello', role: 'editor', token }))
   ws.send(JSON.stringify({ type: 'register', editorId, path, family: 'docs', title: path.split('/').pop(), revision, dirty }))
+  status.textContent = 'ready'
+})
+document.getElementById('ask').addEventListener('click', () => {
+  ws.send(JSON.stringify({
+    type: 'agent_request',
+    editorId,
+    requestId: 'req-harness',
+    kind: 'edit_selection',
+    instruction: 'make it shorter',
+    targets: [{ family: 'docs', anchorId: 'a1', blocks: [0, 0], text }],
+  }))
 })
 ws.addEventListener('message', (event) => {
   const message = JSON.parse(event.data)
+  if (message.type === 'agent_event') {
+    status.textContent = message.event + (message.summary ? ': ' + message.summary : '')
+    return
+  }
   if (message.type !== 'command') return
   try {
     let result = {}
-    if (message.command === 'read_document') result = { text }
-    else if (message.command === 'insert_content' || message.command === 'apply_ops') {
+    if (message.command === 'read_document' || message.command === 'read_selection') {
+      result = { text, marked: '<sel>' + text + '</sel>', blocks: [0, 0] }
+    } else if (message.command === 'insert_content' || message.command === 'apply_ops') {
       text += String(message.payload?.html || message.payload?.text || ' edited')
       revision += 1
       dirty = true
-      document.getElementById('doc').textContent = text
+      paint()
       result = { summary: 'edited', bytes: text }
+    } else if (message.command === 'replace_selection') {
+      const expected = message.payload?.expectedText
+      if (typeof expected === 'string' && expected !== text) {
+        ws.send(JSON.stringify({ type: 'result', requestId: message.requestId, ok: false, reason: 'selection_changed', error: 'selection changed' }))
+        return
+      }
+      text = String(message.payload?.html || '').replace(/<[^>]+>/g, '')
+      revision += 1
+      dirty = true
+      paint()
+      result = { summary: 'replaced' }
     } else if (message.command === 'save_document') {
       result = { bytesBase64: btoa(text) }
       dirty = false

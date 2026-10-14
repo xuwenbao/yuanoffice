@@ -26,6 +26,8 @@ const MCP_COMMANDS = new Set<McpEditorCommand>([
   'apply_ops',
   'read_document',
   'save_document',
+  'read_selection',
+  'replace_selection',
 ])
 
 /**
@@ -69,10 +71,31 @@ export async function createWebDocsPlatform(): Promise<DocsPlatform> {
     close(editorId, dirty) {
       link.closeEditor(editorId, dirty)
     },
+    submitRequest(request) {
+      link.submitRequest(request)
+    },
+    cancelRequest(requestId) {
+      link.cancelRequest(requestId)
+    },
+    onAgentEvent(handler) {
+      return link.onAgentEvent(handler)
+    },
+    onAgentsChanged(handler) {
+      return link.onAgentsChanged(handler)
+    },
+  }
+  const requests: DocsPlatform['ai'] = {
+    kind: 'external',
+    requests: {
+      submit: (request) => link.submitRequest(request),
+      cancel: (requestId) => link.cancelRequest(requestId),
+      onEvent: (handler) => link.onAgentEvent(handler),
+      onAgents: (handler) => link.onAgentsChanged(handler),
+    },
   }
   return {
     api,
-    ai: null,
+    ai: requests,
     agentControl,
     download: downloadBytes,
     file: {

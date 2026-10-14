@@ -185,4 +185,11 @@ export const fr = {
   aiCmdImages: '{count} image(s) mise(s) à jour',
   aiCmdToc: 'Table des matières insérée ({count} entrées)',
   aiCmdSkipped: ' ({count} bloc(s) protégé(s) ignoré(s))',
+  aiNoAgent: 'No external agent is connected',
+  aiAgentWorking: 'External agent is working…',
+  aiAgentDone: 'The edit is done',
+  aiAgentFailed: 'The external agent could not finish',
+  aiExternalPanelTitle: 'External agent',
+  aiExternalHint: 'Edit requests are sent to the subscribed external agent',
+  aiRollbackRun: 'Undo this edit',
 } satisfies Record<keyof typeof zh, string>

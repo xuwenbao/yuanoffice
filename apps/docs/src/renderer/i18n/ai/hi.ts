@@ -181,4 +181,11 @@ export const hi = {
   aiCmdImages: '{count} चित्र अपडेट किए गए',
   aiCmdToc: 'विषय-सूची सम्मिलित की गई ({count} प्रविष्टियाँ)',
   aiCmdSkipped: ' ({count} सुरक्षित ब्लॉक छोड़े गए)',
+  aiNoAgent: 'No external agent is connected',
+  aiAgentWorking: 'External agent is working…',
+  aiAgentDone: 'The edit is done',
+  aiAgentFailed: 'The external agent could not finish',
+  aiExternalPanelTitle: 'External agent',
+  aiExternalHint: 'Edit requests are sent to the subscribed external agent',
+  aiRollbackRun: 'Undo this edit',
 } satisfies Record<keyof typeof zh, string>

@@ -25,7 +25,9 @@ describe('live tool definitions', () => {
     expect(tools.map((tool) => tool.name)).toEqual([...LIVE_TOOL_NAMES])
     for (const tool of tools) {
       expect(tool.inputSchema.type).toBe('object')
-      expect(Object.keys(tool.inputSchema.properties).length).toBeGreaterThan(0)
+      if (tool.name !== 'list_agent_subscriptions') {
+        expect(Object.keys(tool.inputSchema.properties).length).toBeGreaterThan(0)
+      }
       expect(tool.inputSchema).not.toHaveProperty('additionalProperties', false)
     }
     const replace = tools.find((tool) => tool.name === 'replace_blocks')

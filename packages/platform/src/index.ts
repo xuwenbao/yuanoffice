@@ -10,7 +10,15 @@ import type { AttachmentsPort } from './ports/attachments.js'
 import type { LanguagePort } from './ports/language.js'
 import type { WindowPort } from './ports/window.js'
 
-export type { AgentCommand, AgentControlPort, LiveEditorState } from './ports/agent-control.js'
+export type {
+  AgentCommand,
+  AgentControlPort,
+  AgentRequestKind,
+  AgentSubmit,
+  AgentUiEvent,
+  AgentsInfo,
+  LiveEditorState,
+} from './ports/agent-control.js'
 export type {
   AttachmentAddResult,
   AttachmentMeta,

@@ -7,6 +7,27 @@ tools are specified in `docs/web-architecture.md`. Read that document before
 changing any of them, and update it in the same change when a protocol,
 save rule, tool result, or security boundary moves.
 
+## External agent extension
+
+The "AI edit" action goes through `AiBackend`. On the web host that backend does not call
+a model: it submits an agent request, a subscribed external agent claims it,
+and the agent writes back with MCP tools such as `replace_selection`. The
+design of record is `docs/agent-extension.md`.
+
+Read that document before changing any of:
+
+- `packages/editor-control/**`
+- `packages/control-service/**`
+- `packages/platform/src/ports/agent-control.ts`
+- `packages/platform-web/src/control-link.ts`
+- `apps/*/src/renderer/ai/backend.ts`
+- `apps/*/src/renderer/mcp-bridge.ts`
+- `apps/*/src/renderer/components/AiAskPopover.tsx`
+
+If a tool name, event, request field, or stable error code changes, update
+`docs/agent-extension.md` in the same change. `packages/editor-control` tests
+fail when a live tool name or `LIVE_ERROR_REASONS` entry is missing from it.
+
 ## Theming rules (mandatory)
 
 The suite supports light / dark / system UI themes. The switching mechanism is a

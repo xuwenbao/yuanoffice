@@ -11,7 +11,8 @@ export const serveCommand: CommandDef = {
   name: 'serve',
   summary:
     'Serve the browser editors and the live MCP/CLI bridge on loopback. Does not call a model.',
-  usage: 'serve --root <dir> [--port <n>] [--static <dir>]',
+  usage:
+    'serve --root <dir> [--port <n>] [--static <dir>] [--agent-webhook <url>] [--agent-command <argv>] [--allow-remote-callback]',
   options: [
     {
       name: 'root',
@@ -20,6 +21,21 @@ export const serveCommand: CommandDef = {
     },
     { name: 'port', value: 'n', description: 'loopback port (default 8787)' },
     { name: 'static', value: 'dir', description: 'directory of the built web shell (dist/web)' },
+    {
+      name: 'agent-webhook',
+      value: 'url',
+      description: 'loopback URL notified when an editor creates an agent request',
+    },
+    {
+      name: 'agent-command',
+      value: 'argv',
+      description:
+        'command spawned for each agent request; a JSON string array, or whitespace-separated argv',
+    },
+    {
+      name: 'allow-remote-callback',
+      description: 'allow agent webhook hosts other than loopback',
+    },
   ],
   quiet: true,
   async run(args, ctx) {
@@ -40,13 +56,30 @@ export const serveCommand: CommandDef = {
       })
     }
     const userData = ctx.env.GENOFFICE_USER_DATA || genofficeUserDataDir(ctx.env)
-    const service = await startControlService({
-      port,
-      roots: list.map((root) => resolve(ctx.cwd, root)),
-      userData,
-      ...(flagString(args, 'static') ? { staticDir: flagString(args, 'static') } : {}),
-    })
+    let service
+    try {
+      service = await startControlService({
+        port,
+        roots: list.map((root) => resolve(ctx.cwd, root)),
+        userData,
+        ...(flagString(args, 'static') ? { staticDir: flagString(args, 'static') } : {}),
+        ...(flagString(args, 'agent-webhook')
+          ? { agentWebhook: flagString(args, 'agent-webhook') }
+          : {}),
+        ...(flagString(args, 'agent-command')
+          ? { agentCommand: flagString(args, 'agent-command') }
+          : {}),
+        ...(args.flags['allow-remote-callback'] !== undefined ? { allowRemoteCallback: true } : {}),
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (/webhook|agent command|remote agent/.test(message)) {
+        throw new CliError(EXIT.usage, message, undefined, { reason: 'invalid_argument' })
+      }
+      throw error
+    }
     ctx.log(`genoffice serve ${service.url}`)
+    if (service.agentWebhookSecret) ctx.log(`agent webhook secret ${service.agentWebhookSecret}`)
     await new Promise(() => {})
     return { summary: service.url }
   },

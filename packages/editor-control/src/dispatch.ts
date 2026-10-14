@@ -1,3 +1,10 @@
+import {
+  dispatchAgentServiceTool,
+  isSelectionTool,
+  isServiceAgentTool,
+  selectionPayload,
+  type AgentToolOptions,
+} from './agent-tools.js'
 import { LIVE_TOOL_NAMES, type LiveCommandName, type LiveToolName } from './names.js'
 import { LiveError, type EditorRegistry } from './registry.js'
 import type { EditorSession } from './session.js'
@@ -12,6 +19,7 @@ const MUTATING = new Set<LiveToolName>([
   'apply_ops',
   'apply_sheet_ops',
   'apply_slide_ops',
+  'replace_selection',
 ])
 
 export interface LiveToolInputSchema {
@@ -60,6 +68,25 @@ const DESCRIPTION: Record<LiveToolName, string> = {
     'Write the open editor back to its own path. Pass path to save a copy; an existing target needs overwrite true.',
   document_status:
     'Report dirty, revision, savedRevision, lastSavedAt, and connected for one open document.',
+  subscribe_agent_requests:
+    'Register a webhook or command that is called when an editor creates an agent request. Loopback URLs only, unless the service was started with --allow-remote-callback.',
+  list_agent_subscriptions:
+    'List agent callback subscriptions registered with this control service.',
+  unsubscribe_agent_requests: 'Remove an agent callback subscription by subscriptionId.',
+  get_agent_request:
+    'Read one agent request plus a fresh selection context. The callback body does not include document text; use this tool to fetch it.',
+  claim_agent_request:
+    'Claim a pending agent request. A second caller receives request_claimed. Editing tools require a claim.',
+  complete_agent_request:
+    'Finish a claimed agent request as done or failed, with a short summary shown in the editor.',
+  post_agent_message:
+    'Post a progress or reply message for a claimed agent request. The editor shows it in the AI panel.',
+  list_agent_requests:
+    'List agent requests still in memory. Non-blocking inbox for an interactive session; pass status to filter.',
+  read_selection:
+    'Read the user selection. Pass requestId to read the anchored target of an agent request instead of the live caret.',
+  replace_selection:
+    'Replace the anchored selection with inline HTML. Pass requestId and expectedText. A mismatch returns selection_changed and does not edit. persisted is false until save_document. A target that spans several blocks is refused; use replace_blocks.',
 }
 
 const documentField: LiveToolSchemaProperty = {
@@ -72,6 +99,11 @@ const baseRevisionField: LiveToolSchemaProperty = {
   type: 'integer',
   description:
     'revision from the last read or status; a mismatch returns revision_conflict and does not run',
+}
+
+const requestIdField: LiveToolSchemaProperty = {
+  type: 'string',
+  description: 'agent request this edit belongs to',
 }
 
 const htmlInsert: LiveToolSchemaProperty = {
@@ -130,6 +162,7 @@ const INPUT_SCHEMA: Record<LiveToolName, LiveToolInputSchema> = {
           'insert after this block index; -1 = start of document; omitted = after the block containing the cursor',
       },
       baseRevision: baseRevisionField,
+      requestId: requestIdField,
     },
     ['document', 'html'],
   ),
@@ -146,6 +179,7 @@ const INPUT_SCHEMA: Record<LiveToolName, LiveToolInputSchema> = {
       },
       html: htmlReplace,
       baseRevision: baseRevisionField,
+      requestId: requestIdField,
     },
     ['document', 'startBlockIndex', 'endBlockIndex', 'html'],
   ),
@@ -158,6 +192,7 @@ const INPUT_SCHEMA: Record<LiveToolName, LiveToolInputSchema> = {
         description: 'validate and plan the batch without changing the document',
       },
       baseRevision: baseRevisionField,
+      requestId: requestIdField,
     },
     ['document', 'ops'],
   ),
@@ -172,6 +207,7 @@ const INPUT_SCHEMA: Record<LiveToolName, LiveToolInputSchema> = {
         description: 'plan the batch and report what would change, without modifying the grid',
       },
       baseRevision: baseRevisionField,
+      requestId: requestIdField,
     },
     ['document', 'ops'],
   ),
@@ -189,6 +225,7 @@ const INPUT_SCHEMA: Record<LiveToolName, LiveToolInputSchema> = {
         description: 'validate and plan the batch without changing the deck',
       },
       baseRevision: baseRevisionField,
+      requestId: requestIdField,
     },
     ['document', 'ops'],
   ),
@@ -211,6 +248,84 @@ const INPUT_SCHEMA: Record<LiveToolName, LiveToolInputSchema> = {
     ['document'],
   ),
   document_status: objectSchema({ document: documentField }, ['document']),
+  subscribe_agent_requests: objectSchema(
+    {
+      sink: {
+        type: 'object',
+        description: 'webhook { type, url, secret? } or command { type, argv: string[] }',
+      },
+      filter: {
+        type: 'object',
+        description: 'optional families, paths, and kinds to match',
+      },
+      label: { type: 'string', description: 'name shown to the editor' },
+      ttlSec: { type: 'integer', description: 'subscription lifetime in seconds' },
+    },
+    ['sink'],
+  ),
+  list_agent_subscriptions: objectSchema({}),
+  unsubscribe_agent_requests: objectSchema(
+    {
+      subscriptionId: {
+        type: 'string',
+        description: 'id returned by subscribe_agent_requests',
+      },
+    },
+    ['subscriptionId'],
+  ),
+  get_agent_request: objectSchema({ requestId: requestIdField }, ['requestId']),
+  claim_agent_request: objectSchema(
+    {
+      requestId: requestIdField,
+      agent: { type: 'string', description: 'name recorded as claimedBy' },
+    },
+    ['requestId'],
+  ),
+  complete_agent_request: objectSchema(
+    {
+      requestId: requestIdField,
+      status: { type: 'string', enum: ['done', 'failed'], description: 'how the request ended' },
+      summary: { type: 'string', description: 'short result shown in the editor' },
+    },
+    ['requestId', 'status'],
+  ),
+  post_agent_message: objectSchema(
+    {
+      requestId: requestIdField,
+      text: { type: 'string', description: 'progress or reply shown in the AI panel' },
+    },
+    ['requestId', 'text'],
+  ),
+  list_agent_requests: objectSchema({
+    status: {
+      type: 'string',
+      enum: ['pending', 'claimed', 'done', 'failed', 'cancelled'],
+      description: 'when set, only requests in this state',
+    },
+  }),
+  read_selection: objectSchema(
+    {
+      document: documentField,
+      requestId: {
+        type: 'string',
+        description: 'when set, read this request anchor instead of the live caret',
+      },
+    },
+    ['document'],
+  ),
+  replace_selection: objectSchema(
+    {
+      document: documentField,
+      html: { type: 'string', description: 'replacement inline HTML' },
+      requestId: requestIdField,
+      expectedText: {
+        type: 'string',
+        description: 'text the anchor must still contain; a mismatch returns selection_changed',
+      },
+      baseRevision: baseRevisionField,
+    },
+    ['document', 'html'],
+  ),
 }
 
 export async function dispatchLiveTool(
@@ -219,10 +334,11 @@ export async function dispatchLiveTool(
   args: Record<string, unknown>,
   options: {
     save: (session: EditorSession, path: string, overwrite: boolean) => Promise<{ path: string }>
-  },
+  } & AgentToolOptions,
 ): Promise<LiveToolResult> {
   if (!isTool(name)) throw new LiveError('unsupported', `unknown tool ${name}`)
   if (name === 'open_documents') return openDocuments(registry, args, options)
+  if (isServiceAgentTool(name)) return dispatchAgentServiceTool(registry, name, args, options)
   const target =
     typeof args.document === 'string' ? args.document : typeof args.doc === 'string' ? args.doc : ''
   if (!target) {
@@ -241,7 +357,8 @@ export async function dispatchLiveTool(
       `document changed: editor revision is ${session.revision}, request had ${base}`,
     )
   }
-  const outcome = await session.run(name as LiveCommandName, args)
+  const payload = isSelectionTool(name) ? selectionPayload(args, options) : args
+  const outcome = await session.run(name as LiveCommandName, payload)
   const applied = MUTATING.has(name)
   return {
     ...(isRecord(outcome) ? outcome : { output: outcome }),

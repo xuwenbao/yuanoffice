@@ -50,6 +50,7 @@ flowchart LR
 | 2026-09-24 | Live tools keep the official names (`read_document`, `insert_content`, `replace_blocks`, `apply_ops`, `save_document`, `open_documents`) plus `document_status`. | External skills written for the desktop MCP keep working. Save semantics differ and are stated on the tool.                                                            |
 | 2026-09-24 | `search` / `image` / `media` are off unless `GENOFFICE_ENABLE_CLOUD=1`.                                                                                          | This distribution does not call a model.                                                                                                                               |
 | 2026-09-24 | `@genoffice/file-parse` does not depend on `@genoffice/ai-provider`.                                                                                             | The only mention is a comment in `packages/file-parse/src/parse.ts`. Nothing to strip.                                                                                 |
+| 2026-10-14 | "AI edit" on the web host is an agent request, not a model call. The design is `docs/agent-extension.md`.                                                        | The control service still holds no model key. An external agent is woken by a loopback webhook or a local command and writes back with MCP tools.                      |
 
 Upstream sync: `upstream` is `https://github.com/genspark-ai/genoffice.git`.
 Fast-forward this branch onto `upstream/main` when it is a strict descendant.
@@ -123,12 +124,15 @@ time. The desktop shell's socket accepts the same command names and answers
 `unsupported`: live editing is the control service's job, so a desktop
 `control.json` cannot be mistaken for a successful edit.
 
-| Tool                                                                | Result                                                                                                                                              |
-| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `read_document` / `insert_content` / `replace_blocks` / `apply_ops` | `{ applied, revision, dirty: true, persisted: false }`                                                                                              |
-| `document_status`                                                   | `{ dirty, revision, savedRevision, lastSavedAt, connected }`                                                                                        |
-| `save_document`                                                     | `{ persisted: true, savedRevision, path }` written back to the document's own path unless `path` is set; an existing target needs `overwrite: true` |
-| `open_documents` `close`                                            | Refuses a dirty document with `unsaved_changes` unless `unsaved` is `save` or `discard`                                                             |
+| Tool                                                                                                                  | Result                                                                                                                                              |
+| --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `read_document` / `insert_content` / `replace_blocks` / `apply_ops`                                                   | `{ applied, revision, dirty: true, persisted: false }`                                                                                              |
+| `document_status`                                                                                                     | `{ dirty, revision, savedRevision, lastSavedAt, connected }`                                                                                        |
+| `save_document`                                                                                                       | `{ persisted: true, savedRevision, path }` written back to the document's own path unless `path` is set; an existing target needs `overwrite: true` |
+| `open_documents` `close`                                                                                              | Refuses a dirty document with `unsaved_changes` unless `unsaved` is `save` or `discard`                                                             |
+| `read_selection` / `replace_selection`                                                                                | Selection tools. With `requestId`, the anchor captured for an agent request. `replace_selection` returns `persisted: false`                         |
+| `get_agent_request` / `claim_agent_request` / `complete_agent_request` / `post_agent_message` / `list_agent_requests` | Agent-request inbox. See `docs/agent-extension.md`                                                                                                  |
+| `subscribe_agent_requests` / `list_agent_subscriptions` / `unsubscribe_agent_requests`                                | Webhook or command callback. Loopback URLs unless `--allow-remote-callback`                                                                         |
 
 `POST /mcp` `tools/list` returns each live tool's JSON Schema (`properties` and
 `required`). Names stay the desktop MCP names. Every tool except
@@ -137,7 +141,14 @@ edits may include `baseRevision`. A mismatch returns `revision_conflict` and
 does not run.
 
 Stable errors: `editor_disconnected`, `unsaved_changes`, `revision_conflict`,
-`file_open_in_gui`, `file_not_found`, `unsupported`.
+`file_open_in_gui`, `file_not_found`, `unsupported`, `invalid_argument`,
+`target_not_found`, `no_agent_subscribed`, `request_not_found`,
+`request_cancelled`, `request_claimed`, `selection_changed`.
+
+Agent requests, callback bodies, and the editor `AiBackend` are specified in
+`docs/agent-extension.md`. A callback carries a summary and `requestId`, not
+the document text. Webhook hosts are loopback unless
+`--allow-remote-callback` is set. The service still imports no model provider.
 
 After the socket drops, the registration stays for a lease (default 15s).
 During the lease, live commands return `editor_disconnected` and background
@@ -183,6 +194,8 @@ Absent on purpose, not a silent success:
 - Slides ribbon commands beyond open, text, transform, undo, and save (layouts,
   animations, comments, export, print) answer unavailable. The browser media
   resolver serves archive bytes as data URLs and does not transcode TIFF.
+- PDF "AI edit" cannot rewrite page text in the browser. `replace_selection` returns `unsupported` and the agent should add an annotation.
+- Sheets cell edits from an agent request wait on the wasm reactor (the row below). `read_selection` answers; `replace_selection` and `apply_sheet_ops` return `unsupported`.
 - The slides web host installs a small `Buffer` stand-in before the engine
   loads, and package hashing uses `@noble/hashes` instead of `node:crypto`.
   Inserting audio or video still needs Node `zlib` on the desktop. A
