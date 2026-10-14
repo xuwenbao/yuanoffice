@@ -224,7 +224,13 @@ export interface ZoteroRendererResponse {
  * document to an explicit path.
  */
 export type McpEditorCommand =
-  'insert_content' | 'replace_blocks' | 'apply_ops' | 'read_document' | 'save_document'
+  | 'insert_content'
+  | 'replace_blocks'
+  | 'apply_ops'
+  | 'read_document'
+  | 'save_document'
+  | 'read_selection'
+  | 'replace_selection'
 
 export interface McpCommandMessage {
   requestId: string
@@ -237,6 +243,7 @@ export interface McpCommandResult {
   ok: boolean
   result?: unknown
   error?: string
+  reason?: string
 }
 
 export interface McpSaveResult {

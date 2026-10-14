@@ -21,16 +21,25 @@ export function createElectronDocsPlatform(): DocsPlatform {
         ok: result.ok,
         ...(result.result !== undefined ? { result: result.result } : {}),
         ...(result.error !== undefined ? { error: result.error } : {}),
+        ...(result.reason !== undefined ? { reason: result.reason } : {}),
       })
     },
     publish() {
       api.signalMcpReady()
     },
     close() {},
+    submitRequest() {},
+    cancelRequest() {},
+    onAgentEvent() {
+      return () => {}
+    },
+    onAgentsChanged() {
+      return () => {}
+    },
   }
   return {
     api,
-    ai: { enabled: true },
+    ai: { kind: 'builtin' },
     agentControl,
     download: null,
     file: {

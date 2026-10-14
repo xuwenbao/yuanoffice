@@ -1,0 +1,7 @@
+---
+description: External agent extension — read the design before editing this seam
+globs: packages/editor-control/**,packages/control-service/**,packages/platform/src/ports/agent-control.ts,packages/platform-web/src/control-link.ts,apps/**/ai/backend.ts,apps/**/mcp-bridge.ts,apps/**/AiAskPopover.tsx
+alwaysApply: false
+---
+
+The external-agent seam (agent requests, subscriptions, `AiBackend`, `replace_selection`) is specified in `docs/agent-extension.md`. Read it before changing these files. If a tool name, event, request field, or stable error code moves, update that document in the same change.

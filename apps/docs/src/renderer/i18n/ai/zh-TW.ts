@@ -174,4 +174,11 @@ export const zhTW = {
   aiCmdImages: '已更新 {count} 張圖片',
   aiCmdToc: '已插入目錄({count} 個項目)',
   aiCmdSkipped: '(略過 {count} 個受保護區塊)',
+  aiNoAgent: '未連接外部智能體',
+  aiAgentWorking: '外部智能體處理中…',
+  aiAgentDone: '修改已完成',
+  aiAgentFailed: '外部智能體未能完成',
+  aiExternalPanelTitle: '外部智能體',
+  aiExternalHint: '修改請求會發給已訂閱的外部智能體',
+  aiRollbackRun: '撤銷這次修改',
 } satisfies Record<keyof typeof zh, string>

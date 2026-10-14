@@ -172,4 +172,11 @@ export const zh = {
   aiCmdImages: '已更新 {count} 张图片',
   aiCmdToc: '已插入目录({count} 个条目)',
   aiCmdSkipped: '(跳过 {count} 个受保护块)',
+  aiNoAgent: '未连接外部智能体',
+  aiAgentWorking: '外部智能体处理中…',
+  aiAgentDone: '修改已完成',
+  aiAgentFailed: '外部智能体未能完成',
+  aiExternalPanelTitle: '外部智能体',
+  aiExternalHint: '修改请求会发给已订阅的外部智能体',
+  aiRollbackRun: '撤销这次修改',
 }

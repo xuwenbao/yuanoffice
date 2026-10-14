@@ -58,7 +58,40 @@ export async function installPdfHost(): Promise<void> {
     },
   })
   link.onCommand((command) => {
-    link.reportResult({ requestId: command.requestId, ok: false, error: 'unsupported' })
+    if (
+      command.command === 'read_pdf' ||
+      command.command === 'read_document' ||
+      command.command === 'read_selection'
+    ) {
+      const payload = (command.payload ?? {}) as {
+        targets?: Array<{ page?: number; text?: string }>
+      }
+      const target = payload.targets?.[0]
+      link.reportResult({
+        requestId: command.requestId,
+        ok: true,
+        result: {
+          path: currentPath,
+          ...(target ? { page: target.page, text: target.text ?? '' } : {}),
+        },
+      })
+      return
+    }
+    if (command.command === 'replace_selection') {
+      link.reportResult({
+        requestId: command.requestId,
+        ok: false,
+        reason: 'unsupported',
+        error: 'PDF text cannot be rewritten in the browser host; add an annotation instead',
+      })
+      return
+    }
+    link.reportResult({
+      requestId: command.requestId,
+      ok: false,
+      reason: 'unsupported',
+      error: `${command.command} is not available in the PDF browser host`,
+    })
   })
 
   const implemented: Partial<PdfApi> = {

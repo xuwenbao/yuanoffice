@@ -38,6 +38,8 @@ interface Props {
   onSendNow: (text: string) => void
   /** anchor the current selection and append to the queue */
   onQueueAdd: (text: string) => void
+  /** When set, sending is disabled and the tip explains why (no external agent). */
+  blockedTip?: string
   onQueueUpdate: (qid: string, text: string) => void
   onQueueRemove: (qid: string) => void
 }
@@ -100,6 +102,7 @@ export function AiAskPopover({
   onQueueAdd,
   onQueueUpdate,
   onQueueRemove,
+  blockedTip,
 }: Props): React.JSX.Element | null {
   const { t } = useI18n()
   const [trigger, setTrigger] = useState<{ left: number; top: number } | null>(null)
@@ -366,7 +369,8 @@ export function AiAskPopover({
             <>
               <button
                 className="ai-ask-cancel"
-                disabled={!canSubmit}
+                disabled={!canSubmit || !!blockedTip}
+                data-tip={blockedTip}
                 onClick={() => {
                   onSendNow(text.trim())
                   close()
@@ -376,8 +380,11 @@ export function AiAskPopover({
               </button>
               <button
                 className="ai-ask-confirm"
-                disabled={!canSubmit || queueFull}
-                data-tip={queueFull ? t('aiQueueFullNotice', { max: EDIT_QUEUE_MAX }) : undefined}
+                disabled={!canSubmit || queueFull || !!blockedTip}
+                data-tip={
+                  blockedTip ??
+                  (queueFull ? t('aiQueueFullNotice', { max: EDIT_QUEUE_MAX }) : undefined)
+                }
                 onClick={() => {
                   onQueueAdd(text.trim())
                   close()
@@ -402,6 +409,8 @@ export function AiAskPopover({
           // keep the editor focused and the selection alive
           onMouseDown={(e) => e.preventDefault()}
           onClick={openFromSelection}
+          disabled={!!blockedTip}
+          data-tip={blockedTip}
         >
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden>
             <path

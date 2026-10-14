@@ -19,7 +19,7 @@ import {
 } from '../domain/document'
 import type { HistorySnapshot, Session } from '../domain/session'
 import type { EditTextOp, EditTransformOp, OpenResult, SlidesApi } from '../shared/ipc'
-import { setSlidesPlatform } from './platform'
+import { setSlidesPlatform, type SlidesPlatform } from './platform'
 
 const AI_PREFS = {
   side: 'left' as const,
@@ -88,7 +88,75 @@ export async function installSlidesHost(): Promise<void> {
     },
   })
   link.onCommand((command) => {
-    link.reportResult({ requestId: command.requestId, ok: false, error: 'unsupported' })
+    const fail = (error: string, reason = 'unsupported') =>
+      link.reportResult({ requestId: command.requestId, ok: false, error, reason })
+    const payload = (command.payload ?? {}) as {
+      ops?: unknown[]
+      html?: string
+      targets?: Array<{ slide?: number; elements?: string[]; text?: string }>
+    }
+    try {
+      if (!session) return fail('no presentation is open')
+      if (command.command === 'read_document' || command.command === 'read_selection') {
+        const target = payload.targets?.[0]
+        link.reportResult({
+          requestId: command.requestId,
+          ok: true,
+          result: {
+            slides: session.opened.deck.slides.length,
+            ...(target
+              ? { slide: target.slide, elements: target.elements, text: target.text ?? '' }
+              : {}),
+          },
+        })
+        return
+      }
+      if (command.command === 'apply_slide_ops') {
+        if (!Array.isArray(payload.ops)) return fail('apply_slide_ops needs ops')
+        pushUndo(session)
+        const result = applyTxn(session.opened, { ops: payload.ops as never })
+        if (!result.applied) {
+          session.undoStack.pop()
+          return fail('apply_slide_ops was rejected')
+        }
+        notifyHistory()
+        publish()
+        link.reportResult({ requestId: command.requestId, ok: true, result: { applied: true } })
+        return
+      }
+      if (command.command === 'replace_selection') {
+        const target = payload.targets?.[0]
+        const element = target?.elements?.[0]
+        if (!element || typeof payload.html !== 'string') {
+          return fail('replace_selection needs a slide element and html')
+        }
+        const text = payload.html.replace(/<[^>]+>/g, '')
+        pushUndo(session)
+        const result = applyTxn(
+          session.opened,
+          textEditRequest({
+            slideIndex: target.slide ?? 0,
+            sourceId: element,
+            paragraphs: [{ runs: [{ text }] }],
+          }),
+        )
+        if (!result.applied) {
+          session.undoStack.pop()
+          return fail('replace_selection was rejected')
+        }
+        notifyHistory()
+        publish()
+        link.reportResult({ requestId: command.requestId, ok: true, result: { applied: true } })
+        return
+      }
+      if (command.command === 'save_document') {
+        fail('save_document is handled by the editor save path')
+        return
+      }
+      fail(`${command.command} is not available in the slides browser host`)
+    } catch (error) {
+      fail(error instanceof Error ? error.message : String(error))
+    }
   })
 
   async function openPath(path: string, fitWidthPx: number): Promise<OpenResult | null> {
@@ -302,8 +370,17 @@ export async function installSlidesHost(): Promise<void> {
       },
     }),
     ai: null,
-    agentControl: null,
-  })
+    agentControl: {
+      onCommand: (handler) => link.onCommand(handler),
+      reportResult: (result) => link.reportResult(result),
+      publish: (state) => link.publish(state),
+      close: (editorId, dirty) => link.closeEditor(editorId, dirty),
+      submitRequest: (request) => link.submitRequest(request),
+      cancelRequest: (requestId) => link.cancelRequest(requestId),
+      onAgentEvent: (handler) => link.onAgentEvent(handler),
+      onAgentsChanged: (handler) => link.onAgentsChanged(handler),
+    },
+  } satisfies SlidesPlatform)
 }
 
 function takeSnapshot(session: Session): HistorySnapshot {

@@ -10,6 +10,16 @@ export const LIVE_TOOL_NAMES = [
   'read_pdf',
   'save_document',
   'document_status',
+  'subscribe_agent_requests',
+  'list_agent_subscriptions',
+  'unsubscribe_agent_requests',
+  'get_agent_request',
+  'claim_agent_request',
+  'complete_agent_request',
+  'post_agent_message',
+  'list_agent_requests',
+  'read_selection',
+  'replace_selection',
 ] as const
 
 export type LiveToolName = (typeof LIVE_TOOL_NAMES)[number]
@@ -25,6 +35,8 @@ export const LIVE_COMMANDS = [
   'read_pdf',
   'save_document',
   'document_status',
+  'read_selection',
+  'replace_selection',
 ] as const
 
 export type LiveCommandName = (typeof LIVE_COMMANDS)[number]

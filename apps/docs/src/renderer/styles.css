@@ -7434,6 +7434,11 @@ body.docs-crop-active
   cursor: pointer;
 }
 
+.ai-queue-anchor-working {
+  background: var(--accent-soft);
+  border-bottom-style: solid;
+}
+
 /* floating Ask-AI entry that follows the text selection */
 .ai-ask-trigger {
   position: fixed;

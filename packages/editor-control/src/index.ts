@@ -7,4 +7,30 @@ export {
 } from './names.js'
 export type { EditorSession, EditorDirectory } from './session.js'
 export { EditorRegistry, LiveError } from './registry.js'
-export { dispatchLiveTool, liveToolDefinitions, type LiveToolResult } from './dispatch.js'
+export {
+  dispatchLiveTool,
+  liveToolDefinitions,
+  type LiveToolDefinition,
+  type LiveToolResult,
+} from './dispatch.js'
+export {
+  AGENT_REQUEST_KINDS,
+  AGENT_REQUEST_STATUSES,
+  LIVE_ERROR_REASONS,
+  AgentRequestStore,
+  callbackBody,
+  type AgentCallbackBody,
+  type AgentRequest,
+  type AgentRequestEvent,
+  type AgentRequestKind,
+  type AgentRequestStatus,
+  type AgentTarget,
+  type LiveErrorReason,
+} from './requests.js'
+export {
+  AgentSubscriptions,
+  assertCallbackUrl,
+  type AgentSink,
+  type AgentSubscription,
+  type AgentSubscriptionFilter,
+} from './subscriptions.js'
